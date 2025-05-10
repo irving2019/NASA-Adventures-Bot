@@ -1,4 +1,1 @@
-jkdfgerngkj
-dfgdfg
-gfdf
-gdfg
+print("hello")
