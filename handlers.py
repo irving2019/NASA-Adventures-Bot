@@ -10,7 +10,7 @@ router = Router()
 async def start(message: Message):
     await message.reply(f"Привет!\nТвой ID: {message.from_user.id}\nИмя: {message.from_user.first_name}"
                         f"\nЖми /help чтобы ознакомиться с командами бота!",
-                        reply_markup = keyboards.settings)
+                        reply_markup = await keyboards.inline_cars())
 
 @router.message(Command("help"))
 async def help(message: Message):
