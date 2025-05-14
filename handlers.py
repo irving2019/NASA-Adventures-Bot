@@ -2,7 +2,7 @@ import keyboards
 
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 
 router = Router()
 
@@ -29,7 +29,10 @@ async def get_photo(message: Message):
     await message.answer_photo(photo = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBR6Voh2SVNpOvGa374VfvspEiwKRtbMLUcA&s",
                                caption = "Улыбнись!")
 
-
 @router.message(F.photo)
 async def photo(message: Message):
     await message.answer(f'ID фото: {message.photo[-1].file_id}')
+
+@router.callback_query(F.data == "catalog")
+async def catalog(callback: CallbackQuery):
+    await callback.message.answer("Привет!") 
