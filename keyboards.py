@@ -1,26 +1,23 @@
 from aiogram.types import (ReplyKeyboardMarkup, KeyboardButton,
                            InlineKeyboardMarkup, InlineKeyboardButton)
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-#main = ReplyKeyboardMarkup(keyboard=[
-    #[KeyboardButton(text="Каталог")],
-    #[KeyboardButton(text="Корзина"),
-    # KeyboardButton(text="Контакты")]
-#], resize_keyboard=True, input_field_placeholder="Выберите пункт меню.")
+# Основная клавиатура
+main_keyboard = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="🌠 APOD"), KeyboardButton(text="☄️ Астероиды")],
+    [KeyboardButton(text="🔴 Марс"), KeyboardButton(text="🌍 Земля")],
+    [KeyboardButton(text="ℹ️ Помощь")]
+], resize_keyboard=True, input_field_placeholder="Выберите опцию")
 
-main = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Каталог", callback_data="catalog")],
-    [InlineKeyboardButton(text="Корзина", callback_data="basket"), InlineKeyboardButton(text="Контакты", callback_data="contacts")],
+# Клавиатура для выбора марсохода
+mars_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Curiosity", callback_data="mars_curiosity")],
+    [InlineKeyboardButton(text="Perseverance", callback_data="mars_perseverance")],
+    [InlineKeyboardButton(text="Opportunity", callback_data="mars_opportunity")]
 ])
 
-settings = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Telegram", url="https://t.me/voldemarnif")]])
-
-cars = ["Tesla", "Mercedes", "BMW", "Porsche"]
-
-
-async def inline_cars():
-    keyboard = InlineKeyboardBuilder()
-    for car in cars:
-        keyboard.add(InlineKeyboardButton(text=car, callback_data=f'car_{car}'))
-    return keyboard.adjust(2).as_markup() # По 2 кнопки на 1 ряд
+# Клавиатура для навигации по датам
+date_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="⬅️ Предыдущий", callback_data="prev_date"),
+     InlineKeyboardButton(text="Следующий ➡️", callback_data="next_date")],
+    [InlineKeyboardButton(text="🏠 В главное меню", callback_data="main_menu")]
+])
