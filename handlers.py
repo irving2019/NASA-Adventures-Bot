@@ -1,10 +1,14 @@
 import aiohttp
 import datetime
+import logging
 from aiogram import Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
 from config import NASA_API_KEY, APOD_URL, NEO_URL, MARS_PHOTOS_URL, EARTH_URL
 import keyboards
+
+# Настройка логирования
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -23,21 +27,38 @@ async def cmd_start(message: Message):
 @router.message(F.text == "🌠 APOD")
 async def get_apod(message: Message):
     async with aiohttp.ClientSession() as session:
-        params = {
-            "api_key": NASA_API_KEY,
-            "date": datetime.date.today().isoformat()
-        }
-        async with session.get(APOD_URL, params=params) as response:
-            if response.status == 200:
-                data = await response.json()
-                caption = f"🌠 {data['title']}\n\n{data['explanation'][:1000]}..."
-                await message.answer_photo(
-                    photo=data['url'],
-                    caption=caption,
-                    reply_markup=keyboards.date_keyboard
-                )
-            else:
-                await message.answer("Извините, произошла ошибка при получении данных.")
+        try:
+            # Получаем вчерашнюю дату, так как NASA обновляет APOD обычно в течение дня
+            yesterday = datetime.date.today() - datetime.timedelta(days=1)
+            params = {
+                "api_key": NASA_API_KEY,
+                "date": yesterday.isoformat()
+            }
+            async with session.get(APOD_URL, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # Проверяем, является ли медиа видео или изображением
+                    if data.get('media_type') == 'video':
+                        caption = f"🌠 {data['title']}\n\n{data['explanation'][:1000]}..."
+                        await message.answer(
+                            f"{caption}\n\nВидео доступно по ссылке: {data['url']}",
+                            reply_markup=keyboards.date_keyboard
+                        )
+                    else:  # image
+                        caption = f"🌠 {data['title']}\n\n{data['explanation'][:1000]}..."
+                        await message.answer_photo(
+                            photo=data['url'],
+                            caption=caption,
+                            reply_markup=keyboards.date_keyboard
+                        )
+                else:
+                    error_msg = f"Ошибка API: {response.status}"
+                    logger.error(error_msg)
+                    await message.answer(f"Извините, произошла ошибка при получении данных. Попробуйте позже.")
+        except Exception as e:
+            logger.error(f"Ошибка при получении APOD: {str(e)}")
+            await message.answer("Извините, произошла ошибка при получении данных. Попробуйте позже.")
 
 @router.message(F.text == "☄️ Астероиды")
 async def get_asteroids(message: Message):
@@ -72,41 +93,53 @@ async def show_mars_options(message: Message):
 async def mars_photos(callback: CallbackQuery):
     rover = callback.data.split("_")[1]
     async with aiohttp.ClientSession() as session:
-        # Разные sol для разных роверов и их последние активные дни
-        sols = {
-            "curiosity": {"min": 1000, "max": 4000},  # Curiosity все еще активен
-            "opportunity": {"min": 1, "max": 5111},    # Последний sol Opportunity
-            "perseverance": {"min": 500, "max": 800}   # Perseverance активен
-        }
-        
-        # Выбираем случайный sol из диапазона для разнообразия фотографий
-        import random
-        rover_sols = sols.get(rover, {"min": 1000, "max": 2000})
-        random_sol = random.randint(rover_sols["min"], rover_sols["max"])
-        
-        params = {
-            "api_key": NASA_API_KEY,
-            "sol": random_sol
-        }
-        
-        url = MARS_PHOTOS_URL.format(rover)  # Подставляем имя ровера в URL
-        async with session.get(url, params=params) as response:
-            if response.status == 200:
-                data = await response.json()
-                if data['photos']:
-                    # Берем случайное фото
-                    photo = random.choice(data['photos'])
-                    await callback.message.answer_photo(
-                        photo=photo['img_src'],
-                        caption=f"📸 Фото с марсохода {rover.capitalize()}\n"
-                                f"📅 Дата: {photo['earth_date']}\n"
-                                f"📍 Камера: {photo['camera']['full_name']}\n"
-                                f"🔢 Sol: {random_sol}"
-                    )
-                else:
-                    await callback.message.answer(f"Извините, фотографии для марсохода {rover} не найдены.")
-            else:
-                await callback.message.answer("Извините, произошла ошибка при получении данных.")
+        try:
+            # Разные sol для разных роверов с учетом их лучших периодов работы
+            sols = {
+                "curiosity": {"min": 3000, "max": 4000},    # Curiosity все еще активен
+                "opportunity": {"min": 3000, "max": 4000},  # Самый продуктивный период Opportunity
+                "perseverance": {"min": 100, "max": 800}    # Perseverance активен
+            }
+            
+            import random
+            rover_sols = sols.get(rover, {"min": 1000, "max": 2000})
+            
+            # Для получения разных фотографий делаем несколько попыток
+            max_attempts = 5
+            success = False
+            
+            for attempt in range(max_attempts):
+                random_sol = random.randint(rover_sols["min"], rover_sols["max"])
+                params = {
+                    "api_key": NASA_API_KEY,
+                    "sol": random_sol,
+                    "page": random.randint(1, 3)  # Добавляем случайную страницу
+                }
+                
+                url = MARS_PHOTOS_URL.format(rover)
+                async with session.get(url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data['photos']:
+                            # Берем случайное фото из всех доступных
+                            photo = random.choice(data['photos'])
+                            await callback.message.answer_photo(
+                                photo=photo['img_src'],
+                                caption=f"📸 Фото с марсохода {rover.capitalize()}\n"
+                                        f"📅 Земная дата: {photo['earth_date']}\n"
+                                        f"📍 Камера: {photo['camera']['full_name']}\n"
+                                        f"🔢 Sol: {random_sol}"
+                            )
+                            success = True
+                            break
+            
+            if not success:
+                await callback.message.answer(f"Извините, не удалось найти фотографии для марсохода {rover}. Попробуйте еще раз.")
+                
+        except Exception as e:
+            logger.error(f"Ошибка при получении фото с Марса: {str(e)}")
+            await callback.message.answer("Извините, произошла ошибка при получении данных.")
+            
     await callback.answer()
 
 @router.message(F.text == "ℹ️ Помощь")
