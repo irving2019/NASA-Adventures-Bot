@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  nasa-bot:
+    build: .
+    container_name: nasa-space-explorer-bot
+    restart: always
+    volumes:
+      - ./config.py:/app/config.py:ro  # Монтируем конфиг как read-only
+    environment:
+      - TZ=Europe/Moscow  # Устанавливаем временную зону
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
