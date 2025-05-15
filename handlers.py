@@ -1,6 +1,7 @@
 import aiohttp
 import datetime
 import logging
+import random
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, CallbackQuery
@@ -33,34 +34,53 @@ async def cmd_start(message: Message):
 async def get_apod(message: Message):
     async with aiohttp.ClientSession() as session:
         try:
-            # Получаем вчерашнюю дату, так как NASA обновляет APOD обычно в течение дня
-            yesterday = datetime.date.today() - datetime.timedelta(days=1)
             params = {
                 "api_key": NASA_API_KEY,
-                "date": yesterday.isoformat()
+                "thumbs": True  # Запрашиваем миниатюры для видео
             }
+            
             async with session.get(APOD_URL, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
                     
-                    # Проверяем, является ли медиа видео или изображением
+                    # Проверяем тип медиа
                     if data.get('media_type') == 'video':
-                        caption = f"🌠 {data['title']}\n\n{data['explanation'][:1000]}..."
-                        await message.answer(
-                            f"{caption}\n\nВидео доступно по ссылке: {data['url']}",
-                            reply_markup=keyboards.date_keyboard
-                        )
+                        caption = f"🌠 {data.get('title', 'Astronomy Picture of the Day')}\n\n"
+                        if 'explanation' in data:
+                            caption += f"{data['explanation'][:1000]}..."
+                        
+                        # Если есть миниатюра, отправляем её с ссылкой на видео
+                        if data.get('thumbnail_url'):
+                            await message.answer_photo(
+                                photo=data['thumbnail_url'],
+                                caption=f"{caption}\n\n🎥 Видео доступно по ссылке: {data['url']}",
+                                reply_markup=keyboards.date_keyboard
+                            )
+                        else:
+                            await message.answer(
+                                f"{caption}\n\n🎥 Видео доступно по ссылке: {data['url']}",
+                                reply_markup=keyboards.date_keyboard
+                            )
                     else:  # image
-                        caption = f"🌠 {data['title']}\n\n{data['explanation'][:1000]}..."
-                        await message.answer_photo(
-                            photo=data['url'],
-                            caption=caption,
-                            reply_markup=keyboards.date_keyboard
-                        )
+                        caption = f"🌠 {data.get('title', 'Astronomy Picture of the Day')}\n\n"
+                        if 'explanation' in data:
+                            caption += f"{data['explanation'][:1000]}..."
+                        
+                        try:
+                            await message.answer_photo(
+                                photo=data['url'],
+                                caption=caption,
+                                reply_markup=keyboards.date_keyboard
+                            )
+                        except Exception as img_error:
+                            logger.error(f"Ошибка при отправке изображения APOD: {str(img_error)}")
+                            await message.answer(
+                                f"{caption}\n\n🔗 Изображение доступно по ссылке: {data['url']}",
+                                reply_markup=keyboards.date_keyboard
+                            )
                 else:
-                    error_msg = f"Ошибка API: {response.status}"
-                    logger.error(error_msg)
-                    await message.answer(f"Извините, произошла ошибка при получении данных. Попробуйте позже.")
+                    logger.error(f"Ошибка API NASA (APOD): {response.status}")
+                    await message.answer("Извините, произошла ошибка при получении данных. Попробуйте позже.")
         except Exception as e:
             logger.error(f"Ошибка при получении APOD: {str(e)}")
             await message.answer("Извините, произошла ошибка при получении данных. Попробуйте позже.")
@@ -72,20 +92,57 @@ async def get_asteroids(message: Message):
             "api_key": NASA_API_KEY,
             "start_date": datetime.date.today().isoformat()
         }
-        async with session.get(NEO_URL, params=params) as response:
-            if response.status == 200:
-                data = await response.json()
-                asteroids = data['near_earth_objects'][datetime.date.today().isoformat()]
-                
-                text = "☄️ Околоземные астероиды на сегодня:\n\n"
-                for ast in asteroids[:5]:  # Показываем только первые 5 астероидов
-                    text += f"Название: {ast['name']}\n"
-                    text += f"Размер: {ast['estimated_diameter']['meters']['estimated_diameter_min']:.1f}-{ast['estimated_diameter']['meters']['estimated_diameter_max']:.1f} м\n"
-                    text += f"Опасен: {'Да' if ast['is_potentially_hazardous_asteroid'] else 'Нет'}\n\n"
-                
-                await message.answer(text)
-            else:
-                await message.answer("Извините, произошла ошибка при получении данных.")
+        try:
+            async with session.get(NEO_URL, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    today = datetime.date.today().isoformat()
+                    asteroids = data['near_earth_objects'].get(today, [])
+                    
+                    if not asteroids:
+                        await message.answer("На сегодня нет данных об астероидах. Попробуйте позже.")
+                        return
+                    
+                    # Отправляем информацию о каждом астероиде
+                    for ast in asteroids[:5]:  # Показываем только первые 5 астероидов
+                        # Определяем размер астероида
+                        avg_size = (ast['estimated_diameter']['meters']['estimated_diameter_min'] + 
+                                  ast['estimated_diameter']['meters']['estimated_diameter_max']) / 2
+                        
+                        # Выбираем иллюстрацию в зависимости от размера и опасности
+                        if ast['is_potentially_hazardous_asteroid']:
+                            img_url = "https://www.nasa.gov/wp-content/uploads/2019/04/hazardousasteroid.jpg"
+                        elif avg_size >= 500:
+                            img_url = "https://www.nasa.gov/wp-content/uploads/2019/04/largeasteroid.jpg"
+                        elif avg_size >= 100:
+                            img_url = "https://www.nasa.gov/wp-content/uploads/2019/04/mediumasteroid.jpg"
+                        else:
+                            img_url = "https://www.nasa.gov/wp-content/uploads/2019/04/smallasteroid.jpg"
+                        
+                        # Формируем текст описания
+                        text = (f"☄️ Астероид: {ast['name']}\n\n"
+                               f"📏 Размер: {ast['estimated_diameter']['meters']['estimated_diameter_min']:.1f}"
+                               f"-{ast['estimated_diameter']['meters']['estimated_diameter_max']:.1f} м\n"
+                               f"⚠️ Опасен: {'Да ☢️' if ast['is_potentially_hazardous_asteroid'] else 'Нет ✅'}\n"
+                               f"🔺 Макс. сближение: {float(ast['close_approach_data'][0]['miss_distance']['kilometers']):.0f} км\n"
+                               f"🚀 Относительная скорость: {float(ast['close_approach_data'][0]['relative_velocity']['kilometers_per_hour']):.0f} км/ч\n"
+                               f"⏰ Время макс. сближения: {ast['close_approach_data'][0]['close_approach_date_full']}")
+                        
+                        try:
+                            await message.answer_photo(
+                                photo=img_url,
+                                caption=text,
+                                parse_mode="HTML"
+                            )
+                        except Exception as img_error:
+                            logger.error(f"Ошибка при отправке фото астероида: {str(img_error)}")
+                            await message.answer(text)  # Отправляем только текст, если с фото проблема
+                else:
+                    logger.error(f"Ошибка API NASA (NEO): {response.status}")
+                    await message.answer("Извините, произошла ошибка при получении данных об астероидах.")
+        except Exception as e:
+            logger.error(f"Ошибка при получении данных об астероидах: {str(e)}")
+            await message.answer("Произошла ошибка при получении данных об астероидах. Попробуйте позже.")
 
 @router.message(F.text == "🔴 Марс")
 async def show_mars_options(message: Message):
@@ -99,52 +156,83 @@ async def mars_photos(callback: CallbackQuery):
     rover = callback.data.split("_")[1]
     async with aiohttp.ClientSession() as session:
         try:
-            # Разные sol для разных роверов с учетом их лучших периодов работы
-            sols = {
-                "curiosity": {"min": 3000, "max": 4000},    # Curiosity все еще активен
-                "opportunity": {"min": 3000, "max": 4000},  # Самый продуктивный период Opportunity
-                "perseverance": {"min": 100, "max": 800}    # Perseverance активен
-            }
-            
-            import random
-            rover_sols = sols.get(rover, {"min": 1000, "max": 2000})
-            
-            # Для получения разных фотографий делаем несколько попыток
-            max_attempts = 5
-            success = False
-            
-            for attempt in range(max_attempts):
-                random_sol = random.randint(rover_sols["min"], rover_sols["max"])
+            # Определяем параметры для Opportunity
+            if rover == "opportunity":
+                # Известные рабочие sols для Opportunity
+                good_sols = [
+                    100, 200, 300, 400, 500, 600,
+                    700, 800, 900, 1000, 1100, 1200
+                ]
                 params = {
                     "api_key": NASA_API_KEY,
-                    "sol": random_sol,
-                    "page": random.randint(1, 3)  # Добавляем случайную страницу
+                    "sol": random.choice(good_sols),
+                    "camera": "PANCAM",  # Используем основную научную камеру
+                    "page": 1
                 }
-                
-                url = MARS_PHOTOS_URL.format(rover)
-                async with session.get(url, params=params) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data['photos']:
-                            # Берем случайное фото из всех доступных
-                            photo = random.choice(data['photos'])
-                            await callback.message.answer_photo(
-                                photo=photo['img_src'],
-                                caption=f"📸 Фото с марсохода {rover.capitalize()}\n"
-                                        f"📅 Земная дата: {photo['earth_date']}\n"
-                                        f"📍 Камера: {photo['camera']['full_name']}\n"
-                                        f"🔢 Sol: {random_sol}"
+            else:
+                # Параметры для других марсоходов
+                sols = {
+                    "curiosity": {"min": 3000, "max": 4000},
+                    "perseverance": {"min": 100, "max": 800}
+                }
+                rover_sols = sols.get(rover, {"min": 1000, "max": 2000})
+                params = {
+                    "api_key": NASA_API_KEY,
+                    "sol": random.randint(rover_sols["min"], rover_sols["max"]),
+                    "page": random.randint(1, 3)
+                }
+
+            # Делаем запрос к API
+            url = MARS_PHOTOS_URL.format(rover)
+            async with session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data['photos']:
+                        photo = random.choice(data['photos'])
+                        await callback.message.answer_photo(
+                            photo=photo['img_src'],
+                            caption=(f"📸 Фото с марсохода {rover.capitalize()}\n"
+                                   f"📅 Земная дата: {photo['earth_date']}\n"
+                                   f"📍 Камера: {photo['camera']['full_name']}\n"
+                                   f"🔢 Sol: {params['sol']}")
+                        )
+                    else:
+                        # Если фотографии не найдены, пробуем другие параметры для Opportunity
+                        if rover == "opportunity":
+                            params["camera"] = "NAVCAM"  # Пробуем другую камеру
+                            async with session.get(url, params=params) as retry_response:
+                                if retry_response.status == 200:
+                                    retry_data = await retry_response.json()
+                                    if retry_data['photos']:
+                                        photo = random.choice(retry_data['photos'])
+                                        await callback.message.answer_photo(
+                                            photo=photo['img_src'],
+                                            caption=(f"📸 Фото с марсохода {rover.capitalize()}\n"
+                                                   f"📅 Земная дата: {photo['earth_date']}\n"
+                                                   f"📍 Камера: {photo['camera']['full_name']}\n"
+                                                   f"🔢 Sol: {params['sol']}")
+                                        )
+                                    else:
+                                        await callback.message.answer(
+                                            f"Извините, не удалось найти фотографии для марсохода {rover}. "
+                                            f"Попробуйте еще раз."
+                                        )
+                        else:
+                            await callback.message.answer(
+                                f"Извините, не удалось найти фотографии для марсохода {rover}. "
+                                f"Попробуйте еще раз."
                             )
-                            success = True
-                            break
-            
-            if not success:
-                await callback.message.answer(f"Извините, не удалось найти фотографии для марсохода {rover}. Попробуйте еще раз.")
-                
+                else:
+                    logger.error(f"Ошибка API NASA: {response.status}")
+                    await callback.message.answer(
+                        "Извините, произошла ошибка при получении данных. Попробуйте позже."
+                    )
         except Exception as e:
             logger.error(f"Ошибка при получении фото с Марса: {str(e)}")
-            await callback.message.answer("Извините, произошла ошибка при получении данных.")
-            
+            await callback.message.answer(
+                "Извините, произошла ошибка при получении данных. Попробуйте позже."
+            )
+    
     await callback.answer()
 
 @router.message(F.text == "ℹ️ Помощь")
@@ -200,15 +288,14 @@ async def process_coordinates(message: Message):
         await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.")
 
 # Информация о планетах Солнечной системы
-SOLAR_SYSTEM = {
-    "sun": {
+SOLAR_SYSTEM = {    "sun": {
         "name": "☀️ Солнце",
         "type": "Звезда главной последовательности (жёлтый карлик)",
         "mass": "1.989 × 10^30 кг (333 000 масс Земли)",
         "diameter": "1 392 700 км",
         "temperature": "5 500°C (поверхность), 15 000 000°C (ядро)",
         "description": "Центральная звезда Солнечной системы, источник света и тепла для всех планет.",
-        "image": "https://science.nasa.gov/wp-content/uploads/2023/09/sun.jpg"
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/1280px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg"
     },    "mercury": {
         "name": "🌍 Меркурий",
         "type": "Планета земной группы",
@@ -216,8 +303,9 @@ SOLAR_SYSTEM = {
         "orbit": "88 земных дней",
         "temperature": "-180°C до +430°C",
         "description": "Самая маленькая и ближайшая к Солнцу планета.",
-        "image": "https://science.nasa.gov/wp-content/uploads/2023/09/mercury.jpg"
-    },    "venus": {
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Mercury_in_color_-_Prockter07_centered.jpg/1280px-Mercury_in_color_-_Prockter07_centered.jpg"
+    },
+    "venus": {
         "name": "🌍 Венера",
         "type": "Планета земной группы",
         "mass": "4.867 × 10^24 кг",
@@ -232,23 +320,25 @@ SOLAR_SYSTEM = {
         "diameter": "12 742 км",
         "temperature": "15°C (средняя)",
         "description": "Наша планета, единственная известная с жизнью. Третья от Солнца.",
-        "image": "https://science.nasa.gov/wp-content/uploads/2023/09/earth.jpg"
-    },    "mars": {
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1280px-The_Earth_seen_from_Apollo_17.jpg"
+    },
+    "mars": {
         "name": "🔴 Марс",
         "type": "Планета земной группы",
         "mass": "6.39 × 10^23 кг",
         "diameter": "6 779 км",
         "temperature": "-63°C (средняя)",
         "description": "Красная планета, четвёртая от Солнца. Имеет два спутника - Фобос и Деймос.",
-        "image": "https://science.nasa.gov/wp-content/uploads/2023/09/mars.jpg"
-    },    "jupiter": {
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/1280px-OSIRIS_Mars_true_color.jpg"
+    },
+    "jupiter": {
         "name": "🌟 Юпитер",
         "type": "Газовый гигант",
         "mass": "1.898 × 10^27 кг",
         "diameter": "139 820 км",
         "temperature": "-110°C (верхние слои)",
         "description": "Крупнейшая планета Солнечной системы. Имеет систему колец и множество спутников.",
-        "image": "https://science.nasa.gov/wp-content/uploads/2023/09/jupiter.jpg"
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg/1280px-Jupiter_and_its_shrunken_Great_Red_Spot.jpg"
     },    "saturn": {
         "name": "💫 Сатурн",
         "type": "Газовый гигант",
@@ -256,8 +346,9 @@ SOLAR_SYSTEM = {
         "diameter": "116 460 км",
         "temperature": "-140°C (верхние слои)",
         "description": "Шестая планета от Солнца, известная своей впечатляющей системой колец.",
-        "image": "https://science.nasa.gov/wp-content/uploads/2023/09/saturn.jpg"
-    },    "uranus": {
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Saturn_during_Equinox.jpg/1280px-Saturn_during_Equinox.jpg"
+    },
+    "uranus": {
         "name": "⭐ Уран",
         "type": "Ледяной гигант",
         "mass": "8.681 × 10^25 кг",
@@ -272,76 +363,111 @@ SOLAR_SYSTEM = {
         "diameter": "49 244 км",
         "temperature": "-210°C (верхние слои)",
         "description": "Восьмая и самая дальняя планета, известная сильными ветрами в атмосфере.",
-        "image": "https://science.nasa.gov/wp-content/uploads/2023/09/neptune.jpg"
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg/1280px-Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg"
     }
 }
 
-# Информация об экзопланетах
+# Информация об экзопланетах (отсортированы по индексу землеподобия - ESI)
 EXOPLANETS = {
-    "proxima_b": {
-        "name": "🌟 Proxima Centauri b",
-        "distance": "4.2 световых года",
-        "type": "Суперземля",
-        "mass": "≥ 1.17 масс Земли",
-        "year": "11.2 земных дней",
-        "description": "Ближайшая известная экзопланета, находится в потенциально обитаемой зоне.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2486_proximab_art2_1280.jpg"
-    },    "trappist1_e": {
-        "name": "✨ TRAPPIST-1 e",
-        "distance": "39 световых лет",
-        "type": "Землеподобная планета",
-        "mass": "0.77 масс Земли",
-        "year": "6.1 земных дней",
-        "description": "Одна из семи планет системы TRAPPIST-1, считается наиболее похожей на Землю.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2405_trappist-1e_1200.jpg"
-    },    "kepler186f": {
-        "name": "🌠 Kepler-186f",
-        "distance": "582 световых года",
-        "type": "Землеподобная планета",
-        "mass": "1.2 масс Земли",
-        "year": "130 земных дней",
-        "description": "Первая обнаруженная экзопланета размером с Землю в обитаемой зоне.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2406_kepler186f_1200.jpg"
-    },    "hd40307g": {
-        "name": "💫 HD 40307g",
-        "distance": "42 световых года",
-        "type": "Суперземля",
-        "mass": "7.1 масс Земли",
-        "year": "197.8 земных дней",
-        "description": "Находится в обитаемой зоне своей звезды, потенциально может иметь жидкую воду.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2534_superearth_1280.jpg"
-    },    "toi700d": {
-        "name": "⭐ TOI 700 d",
-        "distance": "101.4 световых года",
-        "type": "Землеподобная планета",
-        "mass": "1.72 масс Земли",
-        "year": "37 земных дней",
-        "description": "Первая планета размером с Землю в обитаемой зоне, обнаруженная TESS.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2634_TOI700d_1200.jpg"
-    },    "k218b": {
-        "name": "🌍 K2-18b",
-        "distance": "124 световых года",
-        "type": "Суперземля",
-        "mass": "8.6 масс Земли",
-        "year": "33 земных дня",
-        "description": "Первая суперземля с подтвержденным наличием водяного пара в атмосфере.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2422_K2-18-b_1200.jpg"
-    },    "lhs1140b": {
-        "name": "🌟 LHS 1140 b",
-        "distance": "49 световых лет",
-        "type": "Суперземля",
-        "mass": "6.98 масс Земли",
-        "year": "24.7 земных дней",
-        "description": "Скалистая суперземля в обитаемой зоне, считается одним из лучших кандидатов для поиска жизни.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2535_rocky_1280.jpg"
-    },    "teegardenb": {
-        "name": "✨ Teegarden b",
+    "teegardenb": {
+        "name": "1️⃣ Teegarden b (ESI: 0.95)",
         "distance": "12.5 световых лет",
         "type": "Землеподобная планета",
         "mass": "1.05 масс Земли",
         "year": "4.9 земных дней",
-        "description": "Одна из наиболее похожих на Землю экзопланет с индексом подобия 0.94.",
-        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2533_earthlike_1280.jpg"
+        "star": "Teegarden (ультрахолодный карлик)",
+        "description": "Самая похожая на Землю экзопланета с индексом подобия 0.95. Температура поверхности близка к земной.",
+        "image": "https://www.uzaygo.com/wp-content/uploads/2021/12/Teegarden-B-gezegeni.jpg"
+    },
+    "kepler442b": {
+        "name": "2️⃣ Kepler-442b (ESI: 0.84)",
+        "distance": "1,206 световых лет",
+        "type": "Суперземля",
+        "mass": "2.36 масс Земли",
+        "year": "112.3 земных дней",
+        "star": "Kepler-442 (оранжевый карлик)",
+        "description": "Одна из наиболее перспективных экзопланет для поиска жизни с высоким индексом землеподобия.",
+        "image": "https://exoplanets.nasa.gov/system/resources/detail_files/2207_kepler442b_art2_1280.jpg"
+    },
+    "trappist1_e": {
+        "name": "3️⃣ TRAPPIST-1e (ESI: 0.82)",
+        "distance": "39 световых лет",
+        "type": "Скалистая планета",
+        "mass": "0.77 масс Земли",
+        "year": "6.1 земных дней",
+        "star": "TRAPPIST-1 (ультрахолодный карлик)",
+        "description": "Третья по схожести с Землей экзопланета. Имеет схожие размеры и получает примерно столько же энергии от своей звезды, как Земля от Солнца.",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/TRAPPIST-1_Planet-f.jpg/640px-TRAPPIST-1_Planet-f.jpg"
+    },
+    "kepler186f": {
+        "name": "4️⃣ Kepler-186f (ESI: 0.79)",
+        "distance": "582 световых года",
+        "type": "Землеподобная планета",
+        "mass": "~1.2 масс Земли",
+        "year": "130 земных дней",
+        "star": "Kepler-186 (красный карлик)",
+        "description": "Первая открытая землеподобная планета в обитаемой зоне. Размер планеты всего на 10% больше Земли.",
+        "image": "https://www.cnet.com/a/img/resize/5fd1399118a844fa5605d0f071209ab9dc20f48c/hub/2014/04/17/4e7441aa-945c-4f78-92e8-99bcf2582f08/kepler186f.jpg?auto=webp&width=1200"
+    },
+    "proxima_b": {
+        "name": "5️⃣ Proxima Centauri b (ESI: 0.75)",
+        "distance": "4.2 световых года",
+        "type": "Суперземля",
+        "mass": "≥ 1.17 масс Земли",
+        "year": "11.2 земных дней",
+        "star": "Proxima Centauri (красный карлик)",
+        "description": "Ближайшая к Земле экзопланета с высоким индексом землеподобия, находится в потенциально обитаемой зоне.",
+        "image": "https://orbitaltoday.com/wp-content/uploads/2023/03/Proxima-b-.jpg"
+    },
+    "kepler452b": {
+        "name": "6️⃣ Kepler-452b (ESI: 0.72)",
+        "distance": "1,402 световых года",
+        "type": "Суперземля",
+        "mass": "5 масс Земли",
+        "year": "385 земных дней",
+        "star": "Kepler-452 (жёлтый карлик, похож на Солнце)",
+        "description": "Известна как 'Земля 2.0'. Вращается вокруг звезды, очень похожей на наше Солнце, с периодом близким к земному году.",
+        "image": "https://www.nasa.gov/wp-content/uploads/2015/07/452b_artist_concept.jpg"
+    },
+    "kepler62f": {
+        "name": "7️⃣ Kepler-62f (ESI: 0.67)",
+        "distance": "1,200 световых лет",
+        "type": "Суперземля",
+        "mass": "2.8 масс Земли",
+        "year": "267 земных дней",
+        "star": "Kepler-62 (оранжевый карлик)",
+        "description": "Потенциально океаническая планета в обитаемой зоне. Может быть полностью покрыта глубоким океаном.",
+        "image": "https://www.nasa.gov/wp-content/uploads/2013/04/kepler62f_1.jpg"
+    },
+    "toi700d": {
+        "name": "8️⃣ TOI-700d (ESI: 0.65)",
+        "distance": "101.4 световых года",
+        "type": "Землеподобная планета",
+        "mass": "1.72 масс Земли",
+        "year": "37 земных дней",
+        "star": "TOI-700 (красный карлик)",
+        "description": "Одна из первых планет размером с Землю в обитаемой зоне, открытая телескопом TESS.",
+        "image": "https://www.nasa.gov/wp-content/uploads/2020/01/toi700d-concept-2.jpg"
+    },
+    "lhs1140b": {
+        "name": "9️⃣ LHS 1140b (ESI: 0.63)",
+        "distance": "49 световых лет",
+        "type": "Суперземля",
+        "mass": "6.98 масс Земли",
+        "year": "24.7 земных дней",
+        "star": "LHS 1140 (красный карлик)",
+        "description": "Массивная скалистая планета в обитаемой зоне. Плотная атмосфера может защищать поверхность от радиации.",
+        "image": "https://www.eso.org/public/archives/images/screen/ann17049a.jpg"
+    },
+    "k218b": {
+        "name": "🔟 K2-18b (ESI: 0.61)",
+        "distance": "124 световых года",
+        "type": "Суперземля",
+        "mass": "8.6 масс Земли",
+        "year": "33 земных дня",
+        "star": "K2-18 (красный карлик)",
+        "description": "Первая суперземля с подтвержденным наличием водяного пара в атмосфере. Находится в обитаемой зоне.",
+        "image": "https://www.eso.org/public/archives/images/screen/K2-18b_concept.jpg"
     }
 }
 
@@ -356,48 +482,121 @@ async def show_planets(message: Message):
 @router.message(F.text == "✨ Экзопланеты")
 async def show_exoplanets(message: Message):
     await message.answer(
-        "Выберите экзопланету для получения информации:",
+        "Топ 10 экзопланет по коэффициенту землеподобности 🌎\n"
+        "Отсортированы по ESI (Earth Similarity Index) от самых похожих на Землю",
         reply_markup=keyboards.exoplanets_keyboard
     )
 
 @router.callback_query(F.data.startswith("planet_"))
 async def planet_info(callback: CallbackQuery):
-    planet_id = callback.data.split("_")[1]
-    if planet_id in SOLAR_SYSTEM:
-        planet = SOLAR_SYSTEM[planet_id]
-        info = (f"{planet['name']}\n\n"
-               f"🔹 Тип: {planet['type']}\n"
-               f"🔹 Масса: {planet['mass']}\n"
-               f"🔹 {'Диаметр' if 'diameter' in planet else 'Орбитальный период'}: "
-               f"{planet.get('diameter', planet.get('orbit'))}\n"
-               f"🔹 Температура: {planet['temperature']}\n\n"
-               f"📝 {planet['description']}")
-        
-        # Отправляем фото с подписью
-        await callback.message.answer_photo(
-            photo=planet['image'],
-            caption=info
-        )
+    try:
+        planet_id = callback.data.split("_")[1]
+        if planet_id in SOLAR_SYSTEM:
+            planet = SOLAR_SYSTEM[planet_id]
+            info = (f"{planet['name']}\n\n"
+                   f"🔹 Тип: {planet['type']}\n"
+                   f"🔹 Масса: {planet['mass']}\n"
+                   f"🔹 {'Диаметр' if 'diameter' in planet else 'Орбитальный период'}: "
+                   f"{planet.get('diameter', planet.get('orbit'))}\n"
+                   f"🔹 Температура: {planet['temperature']}\n\n"
+                   f"📝 {planet['description']}")
+            
+            try:
+                # Отправляем фото с подписью
+                await callback.message.answer_photo(
+                    photo=planet['image'],
+                    caption=info
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при отправке фото планеты {planet_id}: {str(e)}")
+                # Если не удалось отправить фото, отправляем только текст
+                await callback.message.answer(info)
+        else:
+            logger.error(f"Планета {planet_id} не найдена в базе данных")
+            await callback.message.answer("Извините, информация о данном объекте временно недоступна")
+    except Exception as e:
+        logger.error(f"Ошибка при обработке информации о планете: {str(e)}")
+        await callback.message.answer("Произошла ошибка при получении информации. Попробуйте позже.")
+    
     await callback.answer()
 
 @router.callback_query(F.data.startswith("exo_"))
 async def exoplanet_info(callback: CallbackQuery):
-    exo_id = "_".join(callback.data.split("_")[1:])
-    if exo_id in EXOPLANETS:
-        planet = EXOPLANETS[exo_id]
-        info = (f"{planet['name']}\n\n"
-               f"🔹 Расстояние от Земли: {planet['distance']}\n"
-               f"🔹 Тип: {planet['type']}\n"
-               f"🔹 Масса: {planet['mass']}\n"
-               f"🔹 Год: {planet['year']}\n\n"
-               f"📝 {planet['description']}")
-        
-        # Проверяем наличие изображения
-        if 'image' in planet:
-            await callback.message.answer_photo(
-                photo=planet['image'],
-                caption=info
-            )
+    try:
+        exo_id = "_".join(callback.data.split("_")[1:])
+        if exo_id in EXOPLANETS:
+            planet = EXOPLANETS[exo_id]
+            info = (f"{planet['name']}\n\n"
+                   f"🔹 Расстояние от Земли: {planet['distance']}\n"
+                   f"🌟 Родительская звезда: {planet['star']}\n"
+                   f"🔹 Тип: {planet['type']}\n"
+                   f"🔹 Масса: {planet['mass']}\n"
+                   f"🔹 Год: {planet['year']}\n\n"
+                   f"📝 {planet['description']}")
+            
+            try:                # Проверяем наличие изображения и пытаемся его отправить
+                if 'image' in planet and planet['image']:
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(planet['image']) as response:
+                                if response.status == 200:
+                                    await callback.message.answer_photo(
+                                        photo=planet['image'],
+                                        caption=info
+                                    )
+                                else:
+                                    logger.error(f"Ошибка загрузки изображения для {exo_id}, статус: {response.status}")
+                                    await callback.message.answer(info)
+                    except Exception as img_error:
+                        logger.error(f"Ошибка при проверке изображения для {exo_id}: {str(img_error)}")
+                        await callback.message.answer(info)
+                else:
+                    await callback.message.answer(info)
+            except Exception as e:
+                logger.error(f"Ошибка при отправке фото экзопланеты {exo_id}: {str(e)}")
+                await callback.message.answer(info)
         else:
-            await callback.message.answer(info)
+            logger.error(f"Экзопланета {exo_id} не найдена в базе данных")
+            await callback.message.answer("Извините, информация о данной экзопланете временно недоступна")
+    except Exception as e:
+        logger.error(f"Ошибка при обработке информации об экзопланете: {str(e)}")
+        await callback.message.answer("Произошла ошибка при получении информации. Попробуйте позже.")
+    
+    await callback.answer()
+
+async def send_planet_info(callback: CallbackQuery, planet_data: dict):
+    try:
+        info = f"{planet_data['name']}\n\n"
+        info += f"📏 Расстояние: {planet_data['distance']}\n"
+        info += f"🌍 Тип: {planet_data['type']}\n"
+        info += f"⚖️ Масса: {planet_data['mass']}\n"
+        info += f"🕒 Год: {planet_data['year']}\n\n"
+        info += f"ℹ️ {planet_data['description']}"
+
+        try:
+            await callback.message.answer_photo(
+                photo=planet_data['image'],
+                caption=info,
+                parse_mode='HTML'
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при загрузке изображения: {str(e)}")
+            # Отправляем сообщение без изображения в случае ошибки
+            await callback.message.answer(
+                text=f"❌ Извините, изображение недоступно.\n\n{info}",
+                parse_mode='HTML'
+            )
+            
+        await callback.answer()
+    except Exception as e:
+        logger.error(f"Общая ошибка при отправке информации: {str(e)}")
+        await callback.message.answer("❌ Произошла ошибка при получении информации о планете.")
+        await callback.answer()
+
+@router.callback_query(F.data == "main_menu")
+async def return_to_main_menu(callback: CallbackQuery):
+    await callback.message.answer(
+        "Выберите интересующий вас раздел:",
+        reply_markup=keyboards.main_keyboard
+    )
     await callback.answer()

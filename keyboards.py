@@ -33,19 +33,20 @@ planets_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🌟 Юпитер", callback_data="planet_jupiter"),
      InlineKeyboardButton(text="💫 Сатурн", callback_data="planet_saturn")],
     [InlineKeyboardButton(text="⭐ Уран", callback_data="planet_uranus"),
-     InlineKeyboardButton(text="✨ Нептун", callback_data="planet_neptune")],
-    [InlineKeyboardButton(text="🏠 В главное меню", callback_data="main_menu")]
+     InlineKeyboardButton(text="✨ Нептун", callback_data="planet_neptune")]
 ])
 
-# Клавиатура для экзопланет (разделена на 2 ряда)
+# Клавиатура для экзопланет (отсортирована по индексу землеподобия - ESI)
 exoplanets_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="🌟 Proxima Centauri b", callback_data="exo_proxima_b"),
-     InlineKeyboardButton(text="✨ TRAPPIST-1 e", callback_data="exo_trappist1_e")],
-    [InlineKeyboardButton(text="🌠 Kepler-186f", callback_data="exo_kepler186f"),
-     InlineKeyboardButton(text="💫 HD 40307g", callback_data="exo_hd40307g")],
-    [InlineKeyboardButton(text="⭐ TOI 700 d", callback_data="exo_toi700d"),
-     InlineKeyboardButton(text="🌍 K2-18b", callback_data="exo_k218b")],
-    [InlineKeyboardButton(text="🌟 LHS 1140 b", callback_data="exo_lhs1140b"),
-     InlineKeyboardButton(text="✨ Teegarden b", callback_data="exo_teegardenb")],
+    [InlineKeyboardButton(text="1️⃣ Teegarden b", callback_data="exo_teegardenb"),
+     InlineKeyboardButton(text="2️⃣ Kepler-442b", callback_data="exo_kepler442b")],
+    [InlineKeyboardButton(text="3️⃣ TRAPPIST-1e", callback_data="exo_trappist1_e"),
+     InlineKeyboardButton(text="4️⃣ Kepler-186f", callback_data="exo_kepler186f")],
+    [InlineKeyboardButton(text="5️⃣ Proxima Centauri b", callback_data="exo_proxima_b"),
+     InlineKeyboardButton(text="6️⃣ Kepler-452b", callback_data="exo_kepler452b")],
+    [InlineKeyboardButton(text="7️⃣ Kepler-62f", callback_data="exo_kepler62f"),
+     InlineKeyboardButton(text="8️⃣ TOI-700d", callback_data="exo_toi700d")],
+    [InlineKeyboardButton(text="9️⃣ LHS 1140b", callback_data="exo_lhs1140b"),
+     InlineKeyboardButton(text="🔟 K2-18b", callback_data="exo_k218b")],
     [InlineKeyboardButton(text="🏠 В главное меню", callback_data="main_menu")]
 ])
