@@ -16,7 +16,7 @@ router = Router()
 async def show_planets(message: Message):
     await message.answer(
         "Выберите объект Солнечной системы для получения информации:",
-        reply_markup=keyboards.planets_keyboard
+        reply_markup=keyboards.events_keyboard
     )
 
 @router.message(F.text == "✨ Экзопланеты")

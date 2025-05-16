@@ -14,22 +14,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONFAULTHANDLER=1
 
-# Копируем файлы зависимостей
+# Копируем файл зависимостей
 COPY requirements.txt .
 
 # Устанавливаем зависимости
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Создаем нового пользователя
-RUN useradd -m -u 1000 bot_user && \
-    chown -R bot_user:bot_user /app
+# Копируем исходный код
+COPY . .
 
-# Переключаемся на непривилегированного пользователя
-USER bot_user
-
-# Копируем остальные файлы проекта
-COPY --chown=bot_user:bot_user . .
-
-# Запускаем бота
+# Указываем команду запуска
 CMD ["python", "run.py"]

@@ -11,6 +11,7 @@
     events_keyboard: Клавиатура для календаря космических событий
     quiz_keyboard: Клавиатура для выбора сложности викторины
     iss_keyboard: Клавиатура для функций, связанных с МКС
+    exoplanets_keyboard: Клавиатура для выбора экзопланеты
 """
 
 from typing import List
@@ -82,6 +83,19 @@ iss_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
     [
         InlineKeyboardButton(text="🛰️ Пролёты над городом", callback_data="iss_passes"),
         InlineKeyboardButton(text="📸 Фото с МКС", callback_data="iss_photos")
+    ],
+    [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
+])
+
+# Клавиатура для экзопланет
+exoplanets_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="Kepler-452b", callback_data="exoplanet_kepler452b"),
+        InlineKeyboardButton(text="Proxima Centauri b", callback_data="exoplanet_proxima_b")
+    ],
+    [
+        InlineKeyboardButton(text="TRAPPIST-1d", callback_data="exoplanet_trappist1d"),
+        InlineKeyboardButton(text="LHS 1140 b", callback_data="exoplanet_lhs1140b")
     ],
     [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
 ])

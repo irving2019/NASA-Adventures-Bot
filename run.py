@@ -1,22 +1,3 @@
-"""
-Основной модуль запуска Telegram-бота для взаимодействия с API NASA.
-
-Этот модуль инициализирует бота, настраивает логирование и регистрирует все обработчики
-команд из различных модулей. Он обеспечивает корректный запуск и остановку бота,
-а также обработку ошибок во время выполнения.
-
-Основные компоненты:
-- Инициализация бота и диспетчера
-- Настройка логирования
-- Регистрация всех роутеров с обработчиками
-- Управление жизненным циклом бота
-
-Атрибуты:
-    logger (logging.Logger): Логгер для записи событий
-    bot (Bot): Экземпляр бота Telegram
-    dp (Dispatcher): Диспетчер для обработки обновлений
-"""
-
 import asyncio
 import logging
 from datetime import datetime
@@ -31,6 +12,7 @@ import planet_handlers
 import iss_handlers
 import space_events_handlers
 import quiz_handlers
+import admin_handlers
 
 
 # Настройка логирования
@@ -45,6 +27,7 @@ dp.include_router(planet_handlers.router)
 dp.include_router(iss_handlers.router)
 dp.include_router(space_events_handlers.router)
 dp.include_router(quiz_handlers.router)
+dp.include_router(admin_handlers.router)  # Административные команды
 
 async def main() -> None:
     """
