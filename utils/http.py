@@ -14,11 +14,6 @@ from contextlib import asynccontextmanager
 class APIClient:
     """
     Клиент для работы с API с поддержкой пула соединений.
-    
-    Attributes:
-        session (aiohttp.ClientSession): Сессия для HTTP-запросов
-        base_url (str): Базовый URL API
-        headers (Dict): Заголовки по умолчанию
     """
     
     def __init__(self, base_url: str, headers: Optional[Dict[str, str]] = None):
@@ -31,14 +26,21 @@ class APIClient:
         """Инициализация клиента."""
         if not self.session:
             async with self._lock:
-                if not self.session:  # Двойная проверка для избежания race condition
-                    # Увеличиваем количество одновременных соединений
-                    conn = aiohttp.TCPConnector(limit=100)
+                if not self.session:
+                    conn = aiohttp.TCPConnector(
+                        limit=100,
+                        enable_cleanup_closed=True,
+                        force_close=True
+                    )
+                    timeout = aiohttp.ClientTimeout(
+                        total=60,      # Общий таймаут
+                        connect=10,    # Таймаут на подключение
+                        sock_read=30   # Таймаут на чтение
+                    )
                     self.session = aiohttp.ClientSession(
                         connector=conn,
                         headers=self.headers,
-                        raise_for_status=True,
-                        timeout=aiohttp.ClientTimeout(total=30)
+                        timeout=timeout
                     )
     
     async def close(self) -> None:
@@ -48,7 +50,7 @@ class APIClient:
             self.session = None
     
     @asynccontextmanager
-    async def get_session(self) -> AsyncGenerator['aiohttp.ClientSession', None]:
+    async def get_session(self) -> AsyncGenerator[aiohttp.ClientSession, None]:
         """Получение сессии с автоматической инициализацией."""
         if not self.session:
             await self.init()
@@ -56,35 +58,59 @@ class APIClient:
         try:
             yield self.session
         except Exception:
-            # В случае критической ошибки пересоздаем сессию
             await self.close()
             raise
     
     async def get(self, url: str, **kwargs) -> Any:
-        """GET-запрос к API."""
+        """GET-запрос к API с повторными попытками."""
         if not url.startswith('http'):
             full_url = f"{self.base_url.rstrip('/')}/{url.lstrip('/')}"
         else:
             full_url = url
         
-        async with self.get_session() as session:
-            async with session.get(full_url, **kwargs) as response:
-                return await response.json()
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                async with self.get_session() as session:
+                    async with session.get(full_url, **kwargs) as response:
+                        response.raise_for_status()
+                        return await response.json()
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(retry_delay * (attempt + 1))
+                await self.close()  # Пересоздаем сессию после ошибки
     
     async def get_bytes(self, url: str, **kwargs) -> bytes:
-        """GET-запрос с получением бинарных данных."""
+        """GET-запрос с получением бинарных данных и повторными попытками."""
         if not url.startswith('http'):
             full_url = f"{self.base_url.rstrip('/')}/{url.lstrip('/')}"
         else:
             full_url = url
-            
-        async with self.get_session() as session:
-            async with session.get(full_url, **kwargs) as response:
-                return await response.read()
+        
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                async with self.get_session() as session:
+                    async with session.get(full_url, **kwargs) as response:
+                        response.raise_for_status()
+                        return await response.read()
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(retry_delay * (attempt + 1))
+                await self.close()  # Пересоздаем сессию после ошибки
 
 
 # Создаем глобальные клиенты для разных API
 nasa_client = APIClient("https://api.nasa.gov")
-neo_client = APIClient("https://api.nasa.gov")  # Используем общий базовый URL
-earth_client = APIClient("https://api.nasa.gov")  # Используем общий базовый URL
-iss_client = APIClient("http://api.open-notify.org")
+neo_client = APIClient("https://api.nasa.gov")
+earth_client = APIClient("https://api.nasa.gov")
+iss_client = APIClient(
+    "http://api.open-notify.org",
+    headers={"User-Agent": "SpaceBot/1.0 (Educational Project)"}
+)

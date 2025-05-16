@@ -21,11 +21,12 @@ APOD_URL = "https://apod.nasa.gov/apod/astropix.html"
 NEO_URL = "https://api.nasa.gov/neo/rest/v1/feed"
 MARS_PHOTOS_URL = "https://api.nasa.gov/mars-photos/api/v1/rovers/{}/photos"  # Убедились, что URL корректен
 EARTH_URL = "https://api.nasa.gov/planetary/earth/imagery"
+NASA_IMAGES_API_URL = "https://images-api.nasa.gov/search"  # API для поиска фотографий NASA
 
-# URLs для API МКС
-ISS_LOCATION_URL = "http://api.open-notify.org/iss-now.json"
-ISS_CREW_URL = "http://api.open-notify.org/astros.json"
-ISS_PASS_URL = "http://api.open-notify.org/iss-pass.json"
+# URLs для API МКС (с альтернативными источниками)
+ISS_LOCATION_URL = "https://api.wheretheiss.at/v1/satellites/25544"  # Альтернативный API для местоположения
+ISS_CREW_URL = "https://www.howmanypeopleareinspacerightnow.com/peopleinspace.json"  # Альтернативный API для экипажа
+ISS_PASS_URL = "https://satellites.fly.dev/passes/25544"  # Альтернативный API для пролётов
 
 # API для запусков и других данных
 LAUNCHES_URL = "https://ll.thespacedevs.com/2.2.0/launch/upcoming"

@@ -3,6 +3,7 @@
 """
 
 import logging
+import aiohttp
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.types.input_file import BufferedInputFile
@@ -11,7 +12,6 @@ from data.planets import SOLAR_SYSTEM, EXOPLANETS
 import keyboards
 from utils.monitoring import track_performance
 from utils.cache import cache_response
-from utils.http import nasa_client
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -82,25 +82,37 @@ async def show_exoplanet_info(callback: CallbackQuery):
                 f"📏 Масса: {planet['mass']}\n"
                 f"🌟 Звезда: {planet['star']}\n"
                 f"📅 Год: {planet['year']}\n"
-                f"📍 Расстояние: {planet['distance']}\n\n"
+                f"📍 Расстояние: {planet['distance']}\n"
+                f"🌫️ Атмосфера: {planet['atmosphere']}\n"
+                f"🌐 Индекс схожести с Землей (ESI): {planet['esi']}\n\n"
                 f"📝 {planet['description']}")
 
             try:
-                image_data = await nasa_client.get_bytes(planet['image'])
-                await callback.message.answer_photo(
-                    photo=BufferedInputFile(image_data, f"{exo_id}.jpg"),
-                    caption=description,
-                    reply_markup=keyboards.get_back_keyboard()
-                )
+                # Загружаем изображение напрямую через aiohttp
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(planet['image']) as response:
+                        if response.status == 200:
+                            image_data = await response.read()
+                            await callback.message.answer_photo(
+                                photo=BufferedInputFile(image_data, f"{exo_id}.jpg"),
+                                caption=description,
+                                reply_markup=keyboards.get_back_keyboard()
+                            )
+                        else:
+                            logger.error(f"Ошибка при загрузке изображения {planet['image']}: {response.status}")
+                            await callback.message.answer(
+                                text=f"{description}\n\n⚠️ Изображение временно недоступно",
+                                reply_markup=keyboards.get_back_keyboard()
+                            )
             except Exception as img_error:
                 logger.error(f"Ошибка при загрузке изображения экзопланеты: {img_error}")
                 await callback.message.answer(
-                    text=description,
+                    text=f"{description}\n\n⚠️ Изображение временно недоступно",
                     reply_markup=keyboards.get_back_keyboard()
                 )
         else:
-            await callback.message.answer("Информация об этой экзопланете недоступна.")
+            await callback.message.answer("❌ Информация об этой экзопланете недоступна.")
             
     except Exception as e:
         logger.error(f"Ошибка при отображении информации об экзопланете: {e}")
-        await callback.message.answer("Произошла ошибка. Попробуйте позже.")
+        await callback.message.answer("❌ Произошла ошибка. Попробуйте позже.")
