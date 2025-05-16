@@ -1,6 +1,19 @@
 """
-Модуль, содержащий все клавиатуры для бота
+Модуль, содержащий все клавиатуры для бота.
+
+Этот модуль определяет все интерактивные клавиатуры, используемые в боте,
+включая основную клавиатуру и специализированные инлайн-клавиатуры для
+различных функций (марсоходы, МКС, викторина и т.д.).
+
+Клавиатуры:
+    main_keyboard: Основная клавиатура с главным меню
+    mars_keyboard: Клавиатура для выбора марсохода
+    events_keyboard: Клавиатура для календаря космических событий
+    quiz_keyboard: Клавиатура для выбора сложности викторины
+    iss_keyboard: Клавиатура для функций, связанных с МКС
 """
+
+from typing import List
 from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
@@ -10,51 +23,143 @@ from aiogram.types import (
 
 
 # Основная клавиатура
-main_keyboard = ReplyKeyboardMarkup(
+main_keyboard: ReplyKeyboardMarkup = ReplyKeyboardMarkup(
     keyboard=[
-    [KeyboardButton(text="🌠 APOD"), KeyboardButton(text="☄️ Астероиды")],
-    [KeyboardButton(text="🔴 Марс"), KeyboardButton(text="🌍 Земля")],
-    [KeyboardButton(text="🌞 Солнечная система"), KeyboardButton(text="✨ Экзопланеты")],
-    [KeyboardButton(text="🛸 МКС"), KeyboardButton(text="🚀 Запуски")],
-    [KeyboardButton(text="📅 События"), KeyboardButton(text="🌡️ Косм. погода")],
-    [KeyboardButton(text="❓ Викторина"), KeyboardButton(text="ℹ️ Помощь")]
-], resize_keyboard=True, input_field_placeholder="Выберите опцию")
+        [KeyboardButton(text="🌠 APOD"), KeyboardButton(text="☄️ Астероиды")],
+        [KeyboardButton(text="🔴 Марс"), KeyboardButton(text="🌍 Земля")],
+        [KeyboardButton(text="🌞 Солнечная система"), KeyboardButton(text="✨ Экзопланеты")],
+        [KeyboardButton(text="🛸 МКС"), KeyboardButton(text="🚀 Запуски")],
+        [KeyboardButton(text="📅 События"), KeyboardButton(text="🌡️ Косм. погода")],
+        [KeyboardButton(text="❓ Викторина"), KeyboardButton(text="ℹ️ Помощь")]
+    ],
+    resize_keyboard=True,
+    input_field_placeholder="Выберите опцию"
+)
 
 # Клавиатура для выбора марсохода
-mars_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Curiosity", callback_data="mars_curiosity"),
-     InlineKeyboardButton(text="Perseverance", callback_data="mars_perseverance")],
+mars_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="Curiosity", callback_data="mars_curiosity"),
+        InlineKeyboardButton(text="Perseverance", callback_data="mars_perseverance")
+    ],
     [InlineKeyboardButton(text="Opportunity", callback_data="mars_opportunity")],
     [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
 ])
 
 # Клавиатура для календаря событий
-events_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Запуски", callback_data="events_launches"),
-     InlineKeyboardButton(text="Затмения", callback_data="events_eclipses")],
-    [InlineKeyboardButton(text="Метеорные потоки", callback_data="events_meteors"),
-     InlineKeyboardButton(text="Другие события", callback_data="events_other")],
+events_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="Запуски", callback_data="events_launches"),
+        InlineKeyboardButton(text="Затмения", callback_data="events_eclipses")
+    ],
+    [
+        InlineKeyboardButton(text="Метеорные потоки", callback_data="events_meteors"),
+        InlineKeyboardButton(text="Другие события", callback_data="events_other")
+    ],
     [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
 ])
 
 # Клавиатура для викторины
-quiz_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Легкий", callback_data="quiz_easy"),
-     InlineKeyboardButton(text="Средний", callback_data="quiz_medium"),
-     InlineKeyboardButton(text="Сложный", callback_data="quiz_hard")],
+quiz_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="Легкий", callback_data="quiz_easy"),
+        InlineKeyboardButton(text="Средний", callback_data="quiz_medium"),
+        InlineKeyboardButton(text="Сложный", callback_data="quiz_hard")
+    ],
     [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
 ])
 
 # Клавиатура для МКС
-iss_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="📍 Где сейчас МКС?", callback_data="iss_location"),
-     InlineKeyboardButton(text="👨‍🚀 Экипаж", callback_data="iss_crew")],
-    [InlineKeyboardButton(text="🎥 Трансляция", callback_data="iss_stream"),
-     InlineKeyboardButton(text="⏰ Пролёты", callback_data="iss_pass")],
+iss_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
+    [
+        InlineKeyboardButton(text="📍 Где сейчас МКС?", callback_data="iss_location"),
+        InlineKeyboardButton(text="👨‍🚀 Экипаж", callback_data="iss_crew")
+    ],
+    [
+        InlineKeyboardButton(text="🎥 Трансляция", callback_data="iss_stream"),
+        InlineKeyboardButton(text="⏰ Пролёты", callback_data="iss_pass")
+    ],
+    [
+        InlineKeyboardButton(text="🛰️ Пролёты над городом", callback_data="iss_passes"),
+        InlineKeyboardButton(text="📸 Фото с МКС", callback_data="iss_photos")
+    ],
     [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
 ])
 
-# Клавиатура для возврата в главное меню
-date_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
-])
+
+def get_back_keyboard() -> InlineKeyboardMarkup:
+    """
+    Создает клавиатуру с единственной кнопкой возврата в главное меню.
+    
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопкой возврата
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
+    ])
+
+
+def get_planets_keyboard() -> InlineKeyboardMarkup:
+    """
+    Создает клавиатуру для выбора планеты Солнечной системы.
+    
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопками планет
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="☀️ Солнце", callback_data="planet_sun"),
+            InlineKeyboardButton(text="☿️ Меркурий", callback_data="planet_mercury"),
+            InlineKeyboardButton(text="♀️ Венера", callback_data="planet_venus")
+        ],
+        [
+            InlineKeyboardButton(text="🌍 Земля", callback_data="planet_earth"),
+            InlineKeyboardButton(text="♂️ Марс", callback_data="planet_mars")
+        ],
+        [
+            InlineKeyboardButton(text="♃ Юпитер", callback_data="planet_jupiter"),
+            InlineKeyboardButton(text="♄ Сатурн", callback_data="planet_saturn")
+        ],
+        [
+            InlineKeyboardButton(text="⛢ Уран", callback_data="planet_uranus"),
+            InlineKeyboardButton(text="♆ Нептун", callback_data="planet_neptune")
+        ],
+        [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
+    ])
+
+
+def get_quiz_answer_keyboard(options: List[str], correct_index: int) -> InlineKeyboardMarkup:
+    """
+    Создает клавиатуру с вариантами ответов для викторины.
+    
+    Args:
+        options (List[str]): Список вариантов ответов
+        correct_index (int): Индекс правильного ответа
+        
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с вариантами ответов
+    """
+    keyboard = []
+    for i, option in enumerate(options):
+        callback_data = f"quiz_answer_{i}_{1 if i == correct_index else 0}"
+        keyboard.append([InlineKeyboardButton(text=option, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_mars_photos_keyboard() -> InlineKeyboardMarkup:
+    """
+    Создает клавиатуру для просмотра фотографий с Марса.
+    
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопками управления просмотром
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🔄 Другое фото", callback_data="mars_next"),
+            InlineKeyboardButton(text="🎥 Другая камера", callback_data="mars_camera")
+        ],
+        [InlineKeyboardButton(text="📅 Другой день", callback_data="mars_date")],
+        [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
+    ])

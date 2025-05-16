@@ -1,11 +1,28 @@
+"""
+Модуль обработчиков команд для взаимодействия с API NASA.
+
+Этот модуль содержит обработчики для различных команд, связанных с получением
+данных от NASA API, включая:
+- Астрономическое изображение дня (APOD)
+- Информацию о околоземных астероидах
+- Фотографии с марсоходов
+- Спутниковые снимки Земли
+
+Attributes:
+    router (Router): Роутер для обработки команд, связанных с NASA API
+    logger (Logger): Логгер для записи событий модуля
+"""
+
 import logging
-from datetime import date
+from datetime import date, datetime
 import random
+from typing import Dict, List, Optional, Union, Any
 
 import aiohttp
 from aiogram import Router, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
+from aiogram.types.input_file import URLInputFile
 
 from config import NASA_API_KEY, APOD_URL, NEO_URL, MARS_PHOTOS_URL, EARTH_URL
 import keyboards
@@ -16,7 +33,18 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
+async def cmd_start(message: Message) -> None:
+    """
+    Обработчик команды /start.
+    
+    Отправляет приветственное сообщение и показывает основную клавиатуру с доступными командами.
+    
+    Args:
+        message (Message): Входящее сообщение от пользователя
+        
+    Returns:
+        None
+    """
     await message.answer(
         "Привет! Я космический бот NASA. Я могу показать вам:\n"
         "🌠 Астрономическое изображение дня (APOD)\n"
@@ -30,17 +58,29 @@ async def cmd_start(message: Message):
     )
 
 @router.message(F.text == "🌠 APOD")
-async def get_apod(message: Message):
+async def get_apod(message: Message) -> None:
+    """
+    Обработчик команды получения астрономического изображения дня.
+    
+    Отправляет пользователю изображение или видео дня от NASA с описанием.
+    Поддерживает как статические изображения, так и видео контент.
+    
+    Args:
+        message (Message): Входящее сообщение от пользователя
+        
+    Returns:
+        None
+    """
     async with aiohttp.ClientSession() as session:
         try:
-            params = {
+            params: Dict[str, Union[str, bool]] = {
                 "api_key": NASA_API_KEY,
                 "thumbs": True
             }
             
             async with session.get(APOD_URL, params=params) as response:
                 if response.status == 200:
-                    data = await response.json()
+                    data: Dict[str, Any] = await response.json()
                     
                     if data.get('media_type') == 'video':
                         caption = f"🌠 {data.get('title', 'Astronomy Picture of the Day')}\n\n"
@@ -49,51 +89,57 @@ async def get_apod(message: Message):
                         
                         if data.get('thumbnail_url'):
                             await message.answer_photo(
-                                photo=data['thumbnail_url'],
-                                caption=f"{caption}\n\n🎥 Видео доступно по ссылке: {data['url']}",
-                                reply_markup=keyboards.date_keyboard
+                                photo=URLInputFile(data['thumbnail_url']),
+                                caption=f"{caption}\n\n🎥 Видео доступно по ссылке: {data['url']}"
                             )
                         else:
                             await message.answer(
-                                f"{caption}\n\n🎥 Видео доступно по ссылке: {data['url']}",
-                                reply_markup=keyboards.date_keyboard
+                                f"{caption}\n\n🎥 Видео доступно по ссылке: {data['url']}"
                             )
-                    else:  # image
+                    else:
                         caption = f"🌠 {data.get('title', 'Astronomy Picture of the Day')}\n\n"
                         if 'explanation' in data:
-                            caption += f"{data['explanation'][:1000]}..."
+                            caption += data['explanation']
                         
-                        try:
-                            await message.answer_photo(
-                                photo=data['url'],
-                                caption=caption,
-                                reply_markup=keyboards.date_keyboard
-                            )
-                        except Exception as img_error:
-                            logger.error(f"Ошибка при отправке изображения APOD: {str(img_error)}")
-                            await message.answer(
-                                f"{caption}\n\n🔗 Изображение доступно по ссылке: {data['url']}",
-                                reply_markup=keyboards.date_keyboard
-                            )
+                        await message.answer_photo(
+                            photo=URLInputFile(data['url']),
+                            caption=caption
+                        )
                 else:
-                    logger.error(f"Ошибка API NASA (APOD): {response.status}")
-                    await message.answer("Извините, произошла ошибка при получении данных. Попробуйте позже.")
+                    logger.error(f"Ошибка при получении APOD: {response.status}")
+                    await message.answer("Извините, произошла ошибка при получении изображения дня. Попробуйте позже.")
+                    
         except Exception as e:
-            logger.error(f"Ошибка при получении APOD: {str(e)}")
-            await message.answer("Извините, произошла ошибка при получении данных. Попробуйте позже.")
+            logger.error(f"Ошибка при получении APOD: {e}")
+            await message.answer("Извините, произошла ошибка при получении изображения дня. Попробуйте позже.")
 
 @router.message(F.text == "☄️ Астероиды")
-async def get_asteroids(message: Message):
+async def get_asteroids(message: Message) -> None:
+    """
+    Обработчик команды получения информации о приближающихся астероидах.
+    
+    Получает данные о околоземных астероидах на текущую дату и отправляет
+    информацию о наиболее близких и потенциально опасных объектах.
+    
+    Args:
+        message (Message): Входящее сообщение от пользователя
+        
+    Returns:
+        None
+    """
     async with aiohttp.ClientSession() as session:
-        params = {
-            "api_key": NASA_API_KEY,
-            "start_date": datetime.date.today().isoformat()
-        }
         try:
+            today = date.today().isoformat()
+            params: Dict[str, str] = {
+                "api_key": NASA_API_KEY,
+                "start_date": today,
+                "end_date": today
+            }
+            
             async with session.get(NEO_URL, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    today = datetime.date.today().isoformat()
+                    today = date.today().isoformat()
                     asteroids = data['near_earth_objects'].get(today, [])
                     
                     if not asteroids:
@@ -138,94 +184,71 @@ async def get_asteroids(message: Message):
             await message.answer("Произошла ошибка при получении данных об астероидах. Попробуйте позже.")
 
 @router.message(F.text == "🔴 Марс")
-async def show_mars_options(message: Message):
-    await message.answer(
-        "Выберите марсоход для просмотра фотографий:",
-        reply_markup=keyboards.mars_keyboard
-    )
-
-@router.callback_query(F.data.startswith("mars_"))
-async def mars_photos(callback: CallbackQuery):
-    rover = callback.data.split("_")[1]
+async def get_mars_photos(message: Message) -> None:
+    """
+    Обработчик команды получения фотографий с Марса.
+    
+    Получает случайную фотографию с одного из действующих марсоходов (Curiosity, Perseverance)
+    и отправляет её пользователю вместе с информацией о дате съемки и камере.
+    
+    Args:
+        message (Message): Входящее сообщение от пользователя
+        
+    Returns:
+        None
+    """
+    rovers: List[str] = ["curiosity", "perseverance"]
+    rover: str = random.choice(rovers)
+    
     async with aiohttp.ClientSession() as session:
         try:
-            # Определяем параметры для Opportunity
-            if rover == "opportunity":
-                good_sols = [
-                    100, 200, 300, 400, 500, 600,
-                    700, 800, 900, 1000, 1100, 1200
-                ]
-                params = {
-                    "api_key": NASA_API_KEY,
-                    "sol": random.choice(good_sols),
-                    "camera": "PANCAM",
-                    "page": 1
-                }
-            else:
-                sols = {
-                    "curiosity": {"min": 3000, "max": 4000},
-                    "perseverance": {"min": 100, "max": 800}
-                }
-                rover_sols = sols.get(rover, {"min": 1000, "max": 2000})
-                params = {
-                    "api_key": NASA_API_KEY,
-                    "sol": random.randint(rover_sols["min"], rover_sols["max"]),
-                    "page": random.randint(1, 3)
-                }
-
-            url = MARS_PHOTOS_URL.format(rover)
+            params: Dict[str, str] = {
+                "api_key": NASA_API_KEY,
+                "sol": "1000"  # Примерно середина миссии для получения хороших фото
+            }
+            
+            url: str = MARS_PHOTOS_URL.format(rover)
             async with session.get(url, params=params) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    if data['photos']:
-                        photo = random.choice(data['photos'])
-                        await callback.message.answer_photo(
-                            photo=photo['img_src'],
-                            caption=(f"📸 Фото с марсохода {rover.capitalize()}\n"
-                                   f"📅 Земная дата: {photo['earth_date']}\n"
-                                   f"📍 Камера: {photo['camera']['full_name']}\n"
-                                   f"🔢 Sol: {params['sol']}")
+                    data: Dict[str, Any] = await response.json()
+                    
+                    if photos := data.get('photos', []):
+                        photo = random.choice(photos)
+                        
+                        caption = (
+                            f"📸 Фото с марсохода {photo['rover']['name']}\n"
+                            f"📅 Дата съёмки: {photo['earth_date']}\n"
+                            f"🎥 Камера: {photo['camera']['full_name']}"
+                        )
+                        
+                        await message.answer_photo(
+                            photo=URLInputFile(photo['img_src']),
+                            caption=caption,
+                            reply_markup=keyboards.get_mars_photos_keyboard()
                         )
                     else:
-                        if rover == "opportunity":
-                            params["camera"] = "NAVCAM"
-                            async with session.get(url, params=params) as retry_response:
-                                if retry_response.status == 200:
-                                    retry_data = await retry_response.json()
-                                    if retry_data['photos']:
-                                        photo = random.choice(retry_data['photos'])
-                                        await callback.message.answer_photo(
-                                            photo=photo['img_src'],
-                                            caption=(f"📸 Фото с марсохода {rover.capitalize()}\n"
-                                                   f"📅 Земная дата: {photo['earth_date']}\n"
-                                                   f"📍 Камера: {photo['camera']['full_name']}\n"
-                                                   f"🔢 Sol: {params['sol']}")
-                                        )
-                                    else:
-                                        await callback.message.answer(
-                                            f"Извините, не удалось найти фотографии для марсохода {rover}. "
-                                            f"Попробуйте еще раз."
-                                        )
-                        else:
-                            await callback.message.answer(
-                                f"Извините, не удалось найти фотографии для марсохода {rover}. "
-                                f"Попробуйте еще раз."
-                            )
+                        await message.answer("К сожалению, фотографии не найдены. Попробуйте позже.")
                 else:
-                    logger.error(f"Ошибка API NASA: {response.status}")
-                    await callback.message.answer(
-                        "Извините, произошла ошибка при получении данных. Попробуйте позже."
-                    )
+                    logger.error(f"Ошибка при получении фото с Марса: {response.status}")
+                    await message.answer("Извините, произошла ошибка при получении фотографий. Попробуйте позже.")
+                    
         except Exception as e:
-            logger.error(f"Ошибка при получении фото с Марса: {str(e)}")
-            await callback.message.answer(
-                "Извините, произошла ошибка при получении данных. Попробуйте позже."
-            )
-    
-    await callback.answer()
+            logger.error(f"Ошибка при получении фото с Марса: {e}")
+            await message.answer("Извините, произошла ошибка при получении фотографий. Попробуйте позже.")
 
 @router.message(F.text == "ℹ️ Помощь")
-async def show_help(message: Message):
+async def show_help(message: Message) -> None:
+    """
+    Обработчик команды помощи.
+    
+    Отправляет пользователю список доступных команд и их описание.
+    
+    Args:
+        message (Message): Входящее сообщение от пользователя
+        
+    Returns:
+        None
+    """
     await message.answer(
         "🚀 Команды бота:\n\n"
         "/start - Начать работу с ботом\n"
@@ -238,46 +261,102 @@ async def show_help(message: Message):
     )
 
 @router.message(F.text == "🌍 Земля")
-async def get_earth_imagery(message: Message):
-    await message.answer("Пожалуйста, отправьте координаты места, которое хотите увидеть в формате: lat, lon\n"
-                        "Например: 29.78, -95.33 (Хьюстон, США)")
+async def get_earth_image(message: Message) -> None:
+    """
+    Обработчик команды получения спутниковых снимков Земли.
+    
+    Запрашивает у пользователя координаты и отправляет спутниковый снимок
+    указанной локации с NASA Earth API.
+    
+    Args:
+        message (Message): Входящее сообщение от пользователя
+        
+    Returns:
+        None
+    """
+    await message.answer(
+        "Для получения спутникового снимка, отправьте мне координаты в формате:\n"
+        "latitude,longitude\n\n"
+        "Например: 55.7558,37.6173 (Москва)",
+        reply_markup=keyboards.get_back_keyboard()
+    )
 
-@router.message(lambda message: message.text and ',' in message.text)
-async def process_coordinates(message: Message):
+@router.message(F.text.regexp(r'^-?\d+\.?\d*,-?\d+\.?\d*$'))
+async def process_coordinates(message: Message) -> None:
+    """
+    Обработчик получения координат для спутникового снимка.
+    
+    Получает координаты от пользователя, валидирует их, запрашивает спутниковый снимок
+    этой локации из NASA Earth API и отправляет его пользователю.
+    
+    Args:
+        message (Message): Входящее сообщение с координатами
+        
+    Returns:
+        None
+        
+    Note:
+        Координаты должны быть в формате "latitude,longitude",
+        где latitude: [-90, 90], longitude: [-180, 180]
+    """
     try:
         lat, lon = map(float, message.text.split(','))
+        
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            raise ValueError("Координаты вне допустимого диапазона")
+            await message.answer(
+                "Некорректные координаты! Широта должна быть от -90 до 90, долгота от -180 до 180."
+            )
+            return
         
         async with aiohttp.ClientSession() as session:
-            params = {
+            params: Dict[str, Union[str, float]] = {
                 "api_key": NASA_API_KEY,
                 "lat": lat,
                 "lon": lon,
-                "dim": 0.15,
-                "date": datetime.date.today().isoformat()
+                "dim": 0.3,  # Размер области в градусах
+                "date": date.today().isoformat()
             }
+            
             async with session.get(EARTH_URL, params=params) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    if 'url' in data:
-                        await message.answer_photo(
-                            photo=data['url'],
-                            caption=f"📍 Спутниковый снимок координат: {lat}, {lon}\n"
-                                  f"📅 Дата съемки: {data.get('date', 'не указана')}"
-                        )
-                    else:
-                        await message.answer("Извините, для этих координат нет доступных снимков.")
+                    image_data = await response.read()
+                    
+                    caption = f"🌍 Спутниковый снимок локации: {lat}, {lon}"
+                    
+                    await message.answer_photo(
+                        photo=image_data,
+                        caption=caption,
+                        reply_markup=keyboards.get_back_keyboard()
+                    )
                 else:
-                    await message.answer("Произошла ошибка при получении снимка. Пожалуйста, попробуйте другие координаты.")
+                    logger.error(f"Ошибка при получении снимка Земли: {response.status}")
+                    await message.answer(
+                        "Извините, не удалось получить снимок для этой локации. "
+                        "Возможно, для неё нет доступных данных."
+                    )
+                    
     except ValueError:
-        await message.answer("Пожалуйста, введите координаты в правильном формате: latitude, longitude\n"
-                           "Например: 29.78, -95.33")
+        await message.answer(
+            "Неверный формат координат. Пожалуйста, используйте формат: latitude,longitude\n"
+            "Например: 55.7558,37.6173"
+        )
     except Exception as e:
-        await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.")
+        logger.error(f"Ошибка при получении снимка Земли: {e}")
+        await message.answer("Извините, произошла ошибка при получении снимка. Попробуйте позже.")
 
 @router.callback_query(F.data == "main_menu")
-async def return_to_main_menu(callback: CallbackQuery):
+async def return_to_main_menu(callback: CallbackQuery) -> None:
+    """
+    Обработчик команды возврата в главное меню.
+    
+    Показывает пользователю главное меню с основными командами бота.
+    
+    Args:
+        callback (CallbackQuery): Входящий колбек от пользователя
+        
+    Returns:
+        None
+    """
     await callback.message.answer(
         "Выберите интересующий вас раздел:",
         reply_markup=keyboards.main_keyboard
