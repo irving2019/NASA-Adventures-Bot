@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  nasa-bot:
+    build: .
+    container_name: nasa-space-explorer-bot
+    restart: always
+    volumes:
+      - ./config.py:/app/config.py:ro
+    environment:
+      - TZ=Europe/Moscow
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "8000:8000"
+
+  redis:
+    image: redis:7.0
+    container_name: nasa-redis
+    restart: always

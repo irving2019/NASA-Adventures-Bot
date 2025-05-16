@@ -8,18 +8,22 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyc
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
 
-# Config files with sensitive data
-config.py
+# Docker
+*.log
+docker-compose.override.yml
 
 # IDE
-.vscode/
 .idea/
-*.swp
-*.swo
-
-# Logs
-*.log
-
-# Environment variables
-.env
+.vscode/
