@@ -1,17 +1,16 @@
-import aiohttp
-import datetime
 import logging
+from datetime import date
 import random
-from aiogram import Router
-from aiogram.filters import Command, CommandStart
+
+import aiohttp
+from aiogram import Router, F
+from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters.magic_data import MagicData
+
 from config import NASA_API_KEY, APOD_URL, NEO_URL, MARS_PHOTOS_URL, EARTH_URL
 import keyboards
-from aiogram.enums import ParseMode
-from aiogram import F
 
-# Настройка логирования
+
 logger = logging.getLogger(__name__)
 
 router = Router()

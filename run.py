@@ -2,22 +2,31 @@
 import asyncio
 import logging
 from datetime import datetime
+
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from config import TOKEN
-from handlers import router
+
+from config import BOT_TOKEN
+import nasa_handlers
+import planet_handlers
+import iss_handlers
+import space_events_handlers
+import quiz_handlers
+
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
 
-# Инициализация бота и диспетчера
-from aiogram.client.default import DefaultBotProperties
-
-bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
-# Регистрация роутера с обработчиками
-dp.include_router(router)
+# Регистрация роутеров с обработчиками
+dp.include_router(nasa_handlers.router)
+dp.include_router(planet_handlers.router)
+dp.include_router(iss_handlers.router)
+dp.include_router(space_events_handlers.router)
+dp.include_router(quiz_handlers.router)
 
 async def main():
     logger.info("Запуск бота...")

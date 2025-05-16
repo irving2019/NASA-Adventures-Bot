@@ -1,11 +1,13 @@
 import logging
+
+import aiohttp
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-import keyboards
-import aiohttp
-from data.planets import SOLAR_SYSTEM, EXOPLANETS
 
-# Настройка логирования
+from data.planets import SOLAR_SYSTEM, EXOPLANETS
+import keyboards
+
+
 logger = logging.getLogger(__name__)
 
 router = Router()
