@@ -90,27 +90,23 @@ iss_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
 # Клавиатура для экзопланет
 exoplanets_keyboard: InlineKeyboardMarkup = InlineKeyboardMarkup(inline_keyboard=[
     [
-        InlineKeyboardButton(text="Kepler-452b", callback_data="exoplanet_kepler452b"),
-        InlineKeyboardButton(text="Proxima Centauri b", callback_data="exoplanet_proxima_b")
+        InlineKeyboardButton(text="🌎 Kepler-452b", callback_data="exo_kepler_452b"),
+        InlineKeyboardButton(text="🌍 Proxima b", callback_data="exo_proxima_b")
     ],
     [
-        InlineKeyboardButton(text="TRAPPIST-1d", callback_data="exoplanet_trappist1d"),
-        InlineKeyboardButton(text="LHS 1140 b", callback_data="exoplanet_lhs1140b")
+        InlineKeyboardButton(text="🌎 TRAPPIST-1e", callback_data="exo_trappist_1e"),
+        InlineKeyboardButton(text="🌍 K2-18b", callback_data="exo_k2_18b")
+    ],
+    [
+        InlineKeyboardButton(text="🌎 Teegarden b", callback_data="exo_teegarden_b"),
+        InlineKeyboardButton(text="🌍 LHS 1140b", callback_data="exo_lhs_1140b")
+    ],
+    [
+        InlineKeyboardButton(text="🌎 GJ 257d", callback_data="exo_gj_257d"),
+        InlineKeyboardButton(text="🌍 Ross 128b", callback_data="exo_ross_128b")
     ],
     [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
 ])
-
-
-def get_back_keyboard() -> InlineKeyboardMarkup:
-    """
-    Создает клавиатуру с единственной кнопкой возврата в главное меню.
-    
-    Returns:
-        InlineKeyboardMarkup: Клавиатура с кнопкой возврата
-    """
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
-    ])
 
 
 def get_planets_keyboard() -> InlineKeyboardMarkup:
@@ -175,5 +171,17 @@ def get_mars_photos_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="🎥 Другая камера", callback_data="mars_camera")
         ],
         [InlineKeyboardButton(text="📅 Другой день", callback_data="mars_date")],
+        [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
+    ])
+
+
+def get_back_keyboard() -> InlineKeyboardMarkup:
+    """
+    Создает простую клавиатуру с кнопкой возврата в главное меню.
+    
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопкой возврата
+    """
+    return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="« Главное меню", callback_data="main_menu")]
     ])

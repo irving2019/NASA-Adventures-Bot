@@ -98,9 +98,8 @@ EXOPLANETS = {
         "star": "Kepler-452 (жёлтый карлик, похож на Солнце)",
         "type": "Суперземля",
         "mass": "5 масс Земли (предполагаемая)",
-        "year": "385 земных дней",
-        "description": "Известна как «Земля 2.0». Находится в обитаемой зоне звезды, похожей на Солнце.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Artist%27s_concept_of_Kepler-452b.jpg/450px-Artist%27s_concept_of_Kepler-452b.jpg"
+        "year": "385 земных дней",        "description": "Известна как «Земля 2.0». Находится в обитаемой зоне звезды, похожей на Солнце.",
+        "image": "https://images.nasa.gov/default-image.jpg"
     },
     "proxima_b": {
         "name": "🌍 Proxima Centauri b",
@@ -108,9 +107,8 @@ EXOPLANETS = {
         "star": "Proxima Centauri (красный карлик)",
         "type": "Скалистая планета",
         "mass": "1.17 масс Земли",
-        "year": "11.2 земных дня",
-        "description": "Ближайшая к нам экзопланета, находится у ближайшей к Солнцу звезды.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Artist%27s_impression_of_the_planet_Proxima_Centauri_b.jpg/450px-Artist%27s_impression_of_the_planet_Proxima_Centauri_b.jpg"
+        "year": "11.2 земных дня",        "description": "Ближайшая к нам экзопланета, находится у ближайшей к Солнцу звезды.",
+        "image": "https://cdn.eso.org/images/screen/ann16056a.jpg"
     },
     "trappist_1e": {
         "name": "🌎 TRAPPIST-1e",
@@ -118,9 +116,8 @@ EXOPLANETS = {
         "star": "TRAPPIST-1 (ультрахолодный красный карлик)",
         "type": "Землеподобная планета",
         "mass": "0.772 масс Земли",
-        "year": "6.1 земных дня",
-        "description": "Одна из семи планет системы TRAPPIST-1. Наиболее вероятный кандидат на наличие жидкой воды.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/PIA21425_-_TRAPPIST-1e_-_Artist%27s_Concept.jpg/450px-PIA21425_-_TRAPPIST-1e_-_Artist%27s_Concept.jpg"
+        "year": "6.1 земных дня",        "description": "Одна из семи планет системы TRAPPIST-1. Наиболее вероятный кандидат на наличие жидкой воды.",
+        "image": "https://cdn.eso.org/images/screen/eso1706a.jpg"
     },
     "k2_18b": {
         "name": "🌍 K2-18b",
@@ -128,9 +125,8 @@ EXOPLANETS = {
         "star": "K2-18 (красный карлик)",
         "type": "Суперземля",
         "mass": "8.6 масс Земли",
-        "year": "33 земных дня",
-        "description": "В атмосфере планеты обнаружены водяной пар и облака. Находится в обитаемой зоне.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/K2-18b_Artist%27s_Impression.png/450px-K2-18b_Artist%27s_Impression.png"
+        "year": "33 земных дня",        "description": "В атмосфере планеты обнаружены водяной пар и облака. Находится в обитаемой зоне.",
+        "image": "https://cdn.eso.org/images/screen/eso1941a.jpg"
     },
     "teegarden_b": {
         "name": "🌎 Teegarden's Star b",
@@ -138,19 +134,16 @@ EXOPLANETS = {
         "star": "Звезда Тигардена (ультрахолодный красный карлик)",
         "type": "Землеподобная планета",
         "mass": "1.05 масс Земли",
-        "year": "4.9 земных дня",
-        "description": "Одна из самых похожих на Землю планет по массе. Имеет высокий индекс подобия Земле.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Artist%27s_impression_of_Teegarden%27s_Star_b.jpg/450px-Artist%27s_impression_of_Teegarden%27s_Star_b.jpg"
+        "year": "4.9 земных дня",        "description": "Одна из самых похожих на Землю планет по массе. Имеет высокий индекс подобия Земле.",
+        "image": "https://cdn.eso.org/images/screen/eso1915a.jpg"
     },
     "ross_128b": {
         "name": "🌍 Ross 128 b",
         "distance": "11 световых лет",
         "star": "Ross 128 (красный карлик)",
-        "type": "Суперземля",
-        "mass": "1.35 масс Земли",
-        "year": "9.9 земных дня",
-        "description": "Вторая ближайшая к нам потенциально обитаемая планета после Proxima b.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Artist%27s_impression_of_Ross_128_b.jpg/450px-Artist%27s_impression_of_Ross_128_b.jpg"
+        "type": "Суперземля",        "mass": "1.35 масс Земли",
+        "year": "9.9 земных дня",        "description": "Вторая ближайшая к нам потенциально обитаемая планета после Proxima b.",
+        "image": "https://cdn.eso.org/images/screen/eso1736a.jpg"
     },
     "lhs_1140b": {
         "name": "🌎 LHS 1140 b",
@@ -158,9 +151,8 @@ EXOPLANETS = {
         "star": "LHS 1140 (красный карлик)",
         "type": "Суперземля",
         "mass": "6.98 масс Земли",
-        "year": "24.7 земных дня",
-        "description": "Скалистая суперземля в обитаемой зоне. Вероятно имеет плотную атмосферу.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Artist%27s_impression_of_the_super-Earth_exoplanet_LHS_1140b.jpg/450px-Artist%27s_impression_of_the_super-Earth_exoplanet_LHS_1140b.jpg"
+        "year": "24.7 земных дня",        "description": "Скалистая суперземля в обитаемой зоне. Вероятно имеет плотную атмосферу.",
+        "image": "https://cdn.eso.org/images/screen/eso1712a.jpg"
     },
     "gj_257d": {
         "name": "🌍 GJ 257d",
@@ -168,8 +160,7 @@ EXOPLANETS = {
         "star": "GJ 257 (красный карлик)",
         "type": "Суперземля",
         "mass": "7.0 масс Земли",
-        "year": "55.7 земных дня",
-        "description": "Находится в оптимистичной обитаемой зоне своей звезды. Потенциально может иметь жидкую воду.",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Artist%27s_impression_of_GJ_257d.jpg/450px-Artist%27s_impression_of_GJ_257d.jpg"
+        "year": "55.7 земных дня",        "description": "Находится в оптимистичной обитаемой зоне своей звезды. Потенциально может иметь жидкую воду.",
+        "image": "https://www.nasa.gov/wp-content/uploads/2019/02/superearth-illustration.jpg"
     }
 }

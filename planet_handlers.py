@@ -1,31 +1,40 @@
-import logging
+"""
+Модуль обработчиков команд для работы с информацией о планетах.
+"""
 
-import aiohttp
+import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
+from aiogram.types.input_file import BufferedInputFile
 
 from data.planets import SOLAR_SYSTEM, EXOPLANETS
 import keyboards
-
+from utils.monitoring import track_performance
+from utils.cache import cache_response
+from utils.http import nasa_client
 
 logger = logging.getLogger(__name__)
-
 router = Router()
 
 @router.message(F.text == "🌞 Солнечная система")
 async def show_planets(message: Message):
     await message.answer(
         "Выберите объект Солнечной системы для получения информации:",
-        reply_markup=keyboards.events_keyboard
+        reply_markup=keyboards.get_planets_keyboard()
     )
 
 @router.message(F.text == "✨ Экзопланеты")
+@track_performance()
 async def show_exoplanets(message: Message):
-    await message.answer(
-        "Топ 10 экзопланет по коэффициенту землеподобности 🌎\n"
-        "Отсортированы по ESI (Earth Similarity Index) от самых похожих на Землю",
-        reply_markup=keyboards.exoplanets_keyboard
-    )
+    """Показывает список доступных экзопланет."""
+    try:
+        await message.answer(
+            "🌌 Выберите экзопланету для получения подробной информации:",
+            reply_markup=keyboards.exoplanets_keyboard
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при отображении списка экзопланет: {e}")
+        await message.answer("Произошла ошибка. Попробуйте позже.")
 
 @router.callback_query(F.data.startswith("planet_"))
 async def planet_info(callback: CallbackQuery):
@@ -59,45 +68,39 @@ async def planet_info(callback: CallbackQuery):
     await callback.answer()
 
 @router.callback_query(F.data.startswith("exo_"))
-async def exoplanet_info(callback: CallbackQuery):
+@track_performance()
+@cache_response(cache_type='exoplanet_info')
+async def show_exoplanet_info(callback: CallbackQuery):
+    """Показывает информацию о выбранной экзопланете."""
     try:
-        exo_id = "_".join(callback.data.split("_")[1:])
+        await callback.answer()
+        exo_id = callback.data.replace("exo_", "").lower()
         if exo_id in EXOPLANETS:
             planet = EXOPLANETS[exo_id]
-            info = (f"{planet['name']}\n\n"
-                   f"🔹 Расстояние от Земли: {planet['distance']}\n"
-                   f"🌟 Родительская звезда: {planet['star']}\n"
-                   f"🔹 Тип: {planet['type']}\n"
-                   f"🔹 Масса: {planet['mass']}\n"
-                   f"🔹 Год: {planet['year']}\n\n"
-                   f"📝 {planet['description']}")
-            
+            description = (f"{planet['name']}\n\n"
+                f"🌍 Тип: {planet['type']}\n"
+                f"📏 Масса: {planet['mass']}\n"
+                f"🌟 Звезда: {planet['star']}\n"
+                f"📅 Год: {planet['year']}\n"
+                f"📍 Расстояние: {planet['distance']}\n\n"
+                f"📝 {planet['description']}")
+
             try:
-                if 'image' in planet and planet['image']:
-                    try:
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(planet['image']) as response:
-                                if response.status == 200:
-                                    await callback.message.answer_photo(
-                                        photo=planet['image'],
-                                        caption=info
-                                    )
-                                else:
-                                    logger.error(f"Ошибка загрузки изображения для {exo_id}, статус: {response.status}")
-                                    await callback.message.answer(info)
-                    except Exception as img_error:
-                        logger.error(f"Ошибка при проверке изображения для {exo_id}: {str(img_error)}")
-                        await callback.message.answer(info)
-                else:
-                    await callback.message.answer(info)
-            except Exception as e:
-                logger.error(f"Ошибка при отправке фото экзопланеты {exo_id}: {str(e)}")
-                await callback.message.answer(info)
+                image_data = await nasa_client.get_bytes(planet['image'])
+                await callback.message.answer_photo(
+                    photo=BufferedInputFile(image_data, f"{exo_id}.jpg"),
+                    caption=description,
+                    reply_markup=keyboards.get_back_keyboard()
+                )
+            except Exception as img_error:
+                logger.error(f"Ошибка при загрузке изображения экзопланеты: {img_error}")
+                await callback.message.answer(
+                    text=description,
+                    reply_markup=keyboards.get_back_keyboard()
+                )
         else:
-            logger.error(f"Экзопланета {exo_id} не найдена в базе данных")
-            await callback.message.answer("Извините, информация о данной экзопланете временно недоступна")
+            await callback.message.answer("Информация об этой экзопланете недоступна.")
+            
     except Exception as e:
-        logger.error(f"Ошибка при обработке информации об экзопланете: {str(e)}")
-        await callback.message.answer("Произошла ошибка при получении информации. Попробуйте позже.")
-    
-    await callback.answer()
+        logger.error(f"Ошибка при отображении информации об экзопланете: {e}")
+        await callback.message.answer("Произошла ошибка. Попробуйте позже.")

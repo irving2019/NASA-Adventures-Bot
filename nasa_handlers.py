@@ -33,6 +33,7 @@ from config import NASA_API_KEY, APOD_URL, NEO_URL, MARS_PHOTOS_URL, EARTH_URL
 import keyboards
 from utils.cache import cache_response
 from utils.http import nasa_client, neo_client, earth_client
+from data.rovers import ROVERS
 
 
 logger = logging.getLogger(__name__)
@@ -212,84 +213,131 @@ async def send_asteroid_info(message: Message, ast: Dict[str, Any]) -> None:
 @track_performance()
 @cache_response(cache_type='mars_photos')
 async def get_mars_photos(message: Message) -> None:
-    """Обработчик команды получения фотографий с Марса с выбором камеры и пагинацией."""
+    """Обработчик команды получения фотографий с Марса."""
     logger.info("Обработчик Марса вызван")
     try:
-        rovers: List[str] = ["curiosity", "perseverance"]
-        rover: str = random.choice(rovers)
-        logger.debug(f"Выбран ровер: {rover}")
-
-        # Предлагаем пользователю выбрать камеру через кнопки
-        cameras = {
-            "FHAZ": "Front Hazard Avoidance Camera",
-            "RHAZ": "Rear Hazard Avoidance Camera",
-            "MAST": "Mast Camera",
-            "CHEMCAM": "Chemistry and Camera Complex",
-            "NAVCAM": "Navigation Camera"
-        }
-
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=value, callback_data=f"mars_camera:{key}:{rover}")]
-            for key, value in cameras.items()
-        ])
-
+        # Создаем клавиатуру для выбора марсохода
+        buttons = []
+        for rover_id, rover_info in ROVERS.items():
+            buttons.append([InlineKeyboardButton(
+                text=f"🤖 {rover_info['name']}",
+                callback_data=f"select_rover:{rover_id}"
+            )])
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+        
         await message.answer(
-            "Выберите камеру для фотографий с Марса:",
-            reply_markup=keyboard
+            "🔴 *Марсианские исследования*\n\n"
+            "Выберите марсоход для просмотра фотографий:",
+            reply_markup=keyboard,
+            parse_mode="Markdown"
         )
 
-    except TelegramForbiddenError:
-        logger.warning("Пользователь заблокировал бота. Сообщение не может быть отправлено.")
     except Exception as e:
-        logger.error(f"Ошибка при подготовке выбора камеры: {e}")
-        await message.answer(
-            "Извините, произошла ошибка при подготовке выбора камеры. "
-            "Попробуйте позже."
+        logger.error(f"Ошибка при подготовке выбора марсохода: {e}")
+        await message.answer("Извините, произошла ошибка. Попробуйте позже.")
+
+@router.callback_query(F.data.startswith("select_rover"))
+async def handle_rover_selection(callback: CallbackQuery) -> None:
+    """Обработчик выбора марсохода."""
+    try:
+        await callback.answer()
+        _, rover_id = callback.data.split(":")
+        rover_info = ROVERS[rover_id]
+        
+        # Создаем клавиатуру для выбора камеры
+        buttons = []
+        for camera_id, camera_info in rover_info['cameras'].items():
+            buttons.append([InlineKeyboardButton(
+                text=f"📸 {camera_info['name']}",
+                callback_data=f"mars_camera:{camera_id}:{rover_id}"
+            )])
+        
+        # Добавляем кнопку случайной камеры
+        buttons.append([InlineKeyboardButton(
+            text="🎲 Случайная камера",
+            callback_data=f"mars_camera:random:{rover_id}"
+        )])
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+        
+        description = (
+            f"🤖 *{rover_info['name']}*\n"
+            f"📅 Дата посадки: {rover_info['landing_date']}\n"
+            f"📝 {rover_info['description']}\n\n"
+            "Выберите камеру для просмотра фотографий:"
         )
+        
+        await callback.message.edit_text(
+            description,
+            reply_markup=keyboard,
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка при выборе марсохода: {e}")
+        await callback.message.answer("Извините, произошла ошибка. Попробуйте позже.")
 
 @router.callback_query(F.data.startswith("mars_camera"))
 async def handle_camera_selection(callback: CallbackQuery) -> None:
     """Обработчик выбора камеры для фотографий с Марса."""
     try:
+        await callback.answer()
         _, selected_camera, rover = callback.data.split(":")
         logger.debug(f"Пользователь выбрал камеру: {selected_camera} для ровера: {rover}")
+
+        if selected_camera == "random":
+            available_cameras = list(ROVERS[rover]['cameras'].keys())
+            selected_camera = random.choice(available_cameras)
+            logger.debug(f"Случайно выбрана камера: {selected_camera}")
 
         params = {
             "api_key": NASA_API_KEY,
             "sol": "1000",
-            "camera": selected_camera,  # Выбор камеры
-            "page": 1  # Пагинация
+            "camera": selected_camera,
+            "page": "1"
         }
 
-        url = f"/mars-photos/api/v1/rovers/{rover}/photos"
-        logger.debug(f"Запрос к API: {url} с параметрами {params}")
+        url = f"mars-photos/api/v1/rovers/{rover}/photos"
         data = await nasa_client.get(url, params=params)
-        logger.info(f"Ответ API: {data}")
+        logger.debug(f"Получен ответ от API: {data}")
 
-        if photos := data.get('photos', []):
-            for photo in photos[:5]:  # Отправляем первые 5 фотографий
-                image_data = await nasa_client.get_bytes(photo['img_src'])
-                optimized_image = await optimize_image(image_data)
+        if not data.get('photos'):
+            await callback.message.answer(
+                f"К сожалению, для камеры {ROVERS[rover]['cameras'][selected_camera]['name']} "
+                f"фотографии не найдены. Попробуйте выбрать другую камеру."
+            )
+            return
 
-                caption = (
-                    f"📸 Фото с марсохода {photo['rover']['name']}\n"
-                    f"📅 Дата съёмки: {photo['earth_date']}\n"
-                    f"🎥 Камера: {photo['camera']['full_name']}"
-                )
+        photo = random.choice(data['photos'])
+        image_data = await nasa_client.get_bytes(photo['img_src'])
+        optimized_image = await optimize_image(image_data)
 
-                try:
-                    await callback.message.answer_photo(
-                        photo=BufferedInputFile(optimized_image, "mars.jpg"),
-                        caption=caption
-                    )
-                except TelegramForbiddenError:
-                    logger.warning("Пользователь заблокировал бота. Сообщение не может быть отправлено.")
-        else:
-            await callback.message.answer("К сожалению, фотографии не найдены. Попробуйте позже.")
-            logger.info("Фотографии не найдены в ответе API")
+        caption = (
+            f"📸 Фото с марсохода {photo['rover']['name']}\n"
+            f"📅 Дата съёмки: {photo['earth_date']}\n"
+            f"🎥 Камера: {ROVERS[rover]['cameras'][selected_camera]['name']}\n"
+            f"📝 {ROVERS[rover]['cameras'][selected_camera]['description']}\n"
+            f"📍 Сол: {photo['sol']}"
+        )
 
-    except TelegramForbiddenError:
-        logger.warning("Пользователь заблокировал бота. Сообщение не может быть отправлено.")
+        more_photos = InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(
+                text="🔄 Ещё фото с этой камеры",
+                callback_data=f"mars_camera:{selected_camera}:{rover}"
+            ),
+            InlineKeyboardButton(
+                text="👈 Назад к выбору камеры",
+                callback_data=f"select_rover:{rover}"
+            )
+        ]])
+
+        await callback.message.answer_photo(
+            photo=BufferedInputFile(optimized_image, "mars.jpg"),
+            caption=caption,
+            reply_markup=more_photos
+        )
+
     except Exception as e:
         logger.error(f"Ошибка при получении фото с Марса: {e}")
         await callback.message.answer(
