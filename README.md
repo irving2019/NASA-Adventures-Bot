@@ -1,5 +1,11 @@
 # NASA Space Explorer Bot 🚀
 
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![aiogram](https://img.shields.io/badge/aiogram-3.x-blue.svg)](https://docs.aiogram.dev/)
+[![NASA API](https://img.shields.io/badge/NASA-API-red.svg)](https://api.nasa.gov/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)](https://www.docker.com/)
+
 Телеграм-бот для исследования космоса, использующий официальное API NASA для получения актуальной информации о космосе. Бот предоставляет прямой доступ к астрономическим данным, изображениям и информации о различных космических объектах - от астероидов до экзопланет.
 
 ## Основные функции 🌟
@@ -58,24 +64,49 @@
 
 ## Установка и настройка 🛠
 
-### Системные требования
+### Быстрый старт
 
-- Python 3.11 или выше
-- pip (менеджер пакетов Python)
-- Git для клонирования репозитория
+1. Клонируйте репозиторий:
+```powershell
+git clone https://github.com/your-username/nasa-space-explorer-bot.git
+cd nasa-space-explorer-bot
+```
 
-### Необходимые ключи API
+2. Создайте файл конфигурации из примера:
+```powershell
+Copy-Item config.example.py config.py
+```
 
-- Токен Telegram бота (получить у [@BotFather](https://t.me/BotFather))
-- API ключ NASA (получить на [api.nasa.gov](https://api.nasa.gov/))
+3. Получите необходимые токены:
+   - Создайте бота через [@BotFather](https://t.me/BotFather) и получите токен
+   - Получите API ключ NASA на [api.nasa.gov](https://api.nasa.gov/)
 
-### Зависимости
+4. Отредактируйте `config.py`:
+```python
+TOKEN = "ВАШ_ТОКЕН_ТЕЛЕГРАМ_БОТА"
+NASA_API_KEY = "ВАШ_КЛЮЧ_API_NASA"
+```
 
-Бот использует следующие основные библиотеки:
-- aiogram 3.x - современный асинхронный фреймворк для Telegram Bot API
-- aiohttp - для асинхронных HTTP-запросов
-- Pillow - для обработки изображений
-- pandas и plotly - для обработки и визуализации данных
+5. Установите и активируйте виртуальное окружение:
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+6. Запустите бота:
+```powershell
+python run.py
+```
+
+### Docker установка 🐋
+
+```bash
+docker-compose up -d --build
+```
+
+Подробные инструкции по установке и настройке можно найти в разделе [Документация по установке](docs/installation.md).
 
 ## Функции клавиатуры
 
@@ -119,219 +150,100 @@
 - Адаптивные клавиатуры
 - Оптимизированные подписи к изображениям
 
-### Пошаговая установка
+### Разработка
 
-1. Клонируйте репозиторий:
+#### Структура проекта
+```
+nasa-space-bot/
+├── config.example.py    # Пример конфигурации
+├── config.py           # Конфигурация (не включена в репозиторий)
+├── run.py             # Точка входа
+├── requirements.txt   # Зависимости
+├── docker-compose.yml # Конфигурация Docker
+├── Dockerfile        # Сборка Docker образа
+├── handlers/        # Обработчики команд
+│   ├── nasa_handlers.py
+│   ├── planet_handlers.py
+│   ├── iss_handlers.py
+│   └── quiz_handlers.py
+├── keyboards.py     # Клавиатуры бота
+└── data/           # Данные
+    └── planets.py  # Информация о планетах
+```
+
+#### Тестирование
+
 ```powershell
-git clone https://github.com/your-username/nasa-space-explorer-bot.git
-cd nasa-space-explorer-bot
+# Запуск тестов
+python -m pytest tests/
+
+# Проверка типов
+mypy .
+
+# Проверка стиля кода
+flake8 .
 ```
 
-2. Создайте и активируйте виртуальное окружение:
+#### Внесение изменений
+
+1. Создайте ветку для ваших изменений:
 ```powershell
-# Windows
-python -m venv venv
-.\venv\Scripts\Activate
-```
-```bash
-# Linux/MacOS
-python3 -m venv venv
-source venv/bin/activate
+git checkout -b feature/your-feature-name
 ```
 
-3. Установите зависимости:
+2. Внесите изменения и добавьте тесты
+
+3. Убедитесь, что все тесты проходят:
 ```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+python -m pytest tests/
 ```
 
-4. Создайте файл конфигурации:
-```powershell
-# Windows
-Copy-Item config.example.py config.py
-```
-```bash
-# Linux/MacOS
-cp config.example.py config.py
-```
-
-5. Отредактируйте config.py, добавив свои ключи API:
-```python
-TOKEN = "ВАШ_ТОКЕН_ТЕЛЕГРАМ_БОТА"
-NASA_API_KEY = "ВАШ_КЛЮЧ_API_NASA"
-```
-
-6. Запустите бота:
-```powershell
-python run.py
-```
-
-4. Создайте файл `config.py` со следующим содержимым:
-```python
-# Токен для Telegram бота
-TOKEN = "ВАШ_ТЕЛЕГРАМ_ТОКЕН"
-
-# API ключ NASA
-NASA_API_KEY = "ВАШ_API_КЛЮЧ_NASA"
-
-# URLs для API NASA
-APOD_URL = "https://api.nasa.gov/planetary/apod"
-NEO_URL = "https://api.nasa.gov/neo/rest/v1/feed"
-MARS_PHOTOS_URL = "https://api.nasa.gov/mars-photos/api/v1/rovers/{}/photos"
-EARTH_URL = "https://api.nasa.gov/planetary/earth/imagery"
-
-# Дополнительные настройки
-CACHE_TIME = 3600  # Время кэширования данных в секундах
-MAX_RETRIES = 3    # Максимальное количество попыток получения данных
-```
-
-### Получение API ключа NASA
-
-1. Перейдите на сайт [api.nasa.gov](https://api.nasa.gov/)
-2. Прокрутите до формы "Generate API Key"
-3. Заполните форму:
-   - First Name: Ваше имя
-   - Last Name: Ваша фамилия
-   - Email: Ваш email
-   - Organization: Необязательно
-4. Нажмите "Signup"
-5. Вы получите API ключ на указанный email
-
-### Запуск бота
-
-1. Убедитесь, что виртуальное окружение активировано
-2. Запустите бота:
-```bash
-python run.py
-```
-
-## Запуск в Docker 🐋
-
-### Предварительные требования
-
-- Docker
-- Docker Compose
-
-### Быстрый старт
-
-1. Клонируйте репозиторий:
-```bash
-git clone https://github.com/your-username/nasa-space-explorer-bot.git
-cd nasa-space-explorer-bot
-```
-
-2. Создайте файл конфигурации:
-```bash
-cp config.example.py config.py
-```
-
-3. Отредактируйте config.py, добавив свои токены:
-```python
-TOKEN = "ВАШ_ТОКЕН_ТЕЛЕГРАМ_БОТА"
-NASA_API_KEY = "ВАШ_КЛЮЧ_API_NASA"
-```
-
-4. Соберите и запустите контейнер:
-```bash
-docker-compose up -d --build
-```
-
-### Управление контейнером
-
-- Просмотр логов:
-```bash
-docker-compose logs -f
-```
-
-- Остановка бота:
-```bash
-docker-compose down
-```
-
-- Перезапуск бота:
-```bash
-docker-compose restart
-```
-
-### Обновление
-
-1. Получите последние изменения:
-```bash
-git pull
-```
-
-2. Пересоберите и перезапустите контейнер:
-```bash
-docker-compose up -d --build
-```
-
-## Использование 🎮
-
-1. Найдите вашего бота в Telegram по имени, которое вы задали в @BotFather
-2. Отправьте команду `/start`
-3. Используйте кнопки меню для навигации:
-   - 🌠 **APOD** - просмотр астрономического изображения дня с описанием
-   - ☄️ **Астероиды** - информация о приближающихся астероидах с оценкой опасности
-   - 🔴 **Марс** - фотографии с марсоходов (Curiosity, Perseverance, Opportunity)
-   - 🌍 **Земля** - спутниковые снимки любой точки планеты (требуется ввод координат)
-   - 🌞 **Солнечная система** - информация и фото всех планет и Солнца
-   - ✨ **Экзопланеты** - каталог известных экзопланет с описаниями и изображениями
-   - ℹ️ **Помощь** - справка по всем командам
-
-### Особенности разделов:
-
-#### Солнечная система 🌞
-- Интерактивное меню для выбора небесного тела
-- Высококачественные фотографии NASA
-- Подробные характеристики каждой планеты:
-  * Масса и диаметр
-  * Температура на поверхности
-  * Орбитальный период
-  * Интересные факты и описание
-
-#### Экзопланеты ✨
-- Каталог самых интересных экзопланет
-- Художественные изображения от NASA
-- Детальная информация:
-  * Расстояние от Земли
-  * Масса в земных массах
-  * Продолжительность года
-  * Потенциальная обитаемость
-  * Характеристики родительской звезды
+4. Создайте Pull Request
 
 ## Вклад в проект 🤝
 
-Pull requests приветствуются! Вы можете помочь проекту:
-- Добавляя новые функции
-- Улучшая существующий код
-- Оптимизируя работу с API
-- Добавляя новые источники данных
-- Улучшая документацию
+Мы приветствуем любой вклад в развитие проекта! Вы можете:
 
-Для крупных изменений, пожалуйста, сначала создайте issue для обсуждения.
+- Сообщать об ошибках через Issues
+- Предлагать новые функции
+- Улучшать документацию
+- Присылать Pull Request с исправлениями
+- Делиться проектом
 
-## Планы развития 📈
+### Правила внесения изменений
 
-- [ ] Добавление информации о спутниках планет
-- [ ] Интеграция с другими астрономическими API
-- [ ] Добавление графиков и диаграмм
+1. Создавайте ветку для каждой новой функции/исправления
+2. Следуйте стилю кода проекта
+3. Добавляйте тесты для новой функциональности
+4. Обновляйте документацию
+5. Пишите понятные сообщения коммитов
+
+## Планы развития 📋
+
+- [ ] Интеграция с другими космическими API
+- [ ] Добавление графиков и визуализаций
 - [ ] Система уведомлений о космических событиях
-- [ ] Расширение каталога экзопланет
+- [ ] Интерактивная карта МКС
+- [ ] Многоязычная поддержка
+- [ ] Улучшение производительности кэширования
 
-## Благодарности 🙏
+## Лицензия 📄
 
-- NASA за предоставление API и изображений
-- Разработчикам библиотеки aiogram
-- Сообществу астрономов за точные данные
-- Всем контрибьюторам проекта
+Проект распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
 
-## Лицензия 📝
+## Поддержка проекта ❤️
 
-[MIT](https://choosealicense.com/licenses/mit/)
+Если вам нравится проект, вы можете:
+- ⭐ Поставить звезду на GitHub
+- 🔄 Форкнуть репозиторий
+- 📢 Рассказать о проекте друзьям
 
-## Контакты 📮
+## Контакты 📬
 
-По всем вопросам и предложениям:
-- Создавайте Issue в репозитории
-- Присылайте Pull Request
-- Свяжитесь с автором через Telegram
+- **Разработчик**: [Ваше Имя](https://github.com/your-username)
+- **Email**: your.email@example.com
+- **Telegram**: [@your_username](https://t.me/your_username)
+
+---
+
+Сделано с ❤️ для любителей космоса
