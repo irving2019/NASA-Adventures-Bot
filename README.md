@@ -106,8 +106,6 @@ python run.py
 docker-compose up -d --build
 ```
 
-Подробные инструкции по установке и настройке можно найти в разделе [Документация по установке](docs/installation.md).
-
 ## Функции клавиатуры
 
 - 🌠 APOD - Астрономическое изображение дня
@@ -240,9 +238,9 @@ python -m pytest tests/
 
 ## Контакты 📬
 
-- **Разработчик**: [Ваше Имя](https://github.com/your-username)
-- **Email**: your.email@example.com
-- **Telegram**: [@your_username](https://t.me/your_username)
+- **Разработчик**: [Владимир Пилипенко](https://github.com/irving2019)
+- **Email**: vovapilip46@gmail.com
+- **Telegram**: [@voldemarnif](https://t.me/voldemarnif)
 
 ---
 
